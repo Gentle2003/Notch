@@ -74,7 +74,7 @@ export function StakePanel({ a, refetch }: { a: Artifact; refetch: () => void })
     return (
       <div className="card p-5 space-y-4">
         <div
-          className={`pill ${a.outcomeYes ? "bg-lime/15 text-lime" : "bg-no/15 text-no"} text-sm`}
+          className={`pill ${a.outcomeYes ? "bg-orange/15 text-orange" : "bg-no/15 text-no"} text-sm`}
         >
           {a.outcomeYes ? "✓ Verified as signal" : "✗ Rejected as noise"}
         </div>

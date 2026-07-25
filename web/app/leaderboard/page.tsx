@@ -72,7 +72,7 @@ export default function LeaderboardPage() {
                 <tr key={r.addr} className="border-b border-border/50 last:border-0">
                   <td className="px-5 py-3.5 text-muted">{i + 1}</td>
                   <td className="px-5 py-3.5 font-mono">{shortAddr(r.addr)}</td>
-                  <td className="px-5 py-3.5 text-right font-bold text-lime">{r.reps}</td>
+                  <td className="px-5 py-3.5 text-right font-bold text-orange">{r.reps}</td>
                   <td className="px-5 py-3.5 text-right">{r.verified}</td>
                   <td className="px-5 py-3.5 text-right text-muted">{r.submissions}</td>
                 </tr>

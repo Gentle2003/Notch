@@ -15,21 +15,24 @@ export default function Home() {
   return (
     <main className="space-y-14">
       {/* Hero */}
-      <section className="pt-8 pb-4">
-        <div className="pill bg-lime/10 text-lime mb-5">● Live on Robinhood Chain</div>
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.05] max-w-3xl">
-          Stake on the <span className="text-lime">signal</span>, not the noise.
+      <section className="pt-10 pb-6">
+        <div className="eyebrow mb-6">
+          <span className="text-orange">●</span> Live on Robinhood Chain — RWA × Meme research
+        </div>
+        <h1 className="display text-5xl sm:text-6xl leading-[1.02] max-w-3xl">
+          Stake on the <span className="em-serif">signal</span>,
+          <br className="hidden sm:block" /> not the noise.
         </h1>
-        <p className="text-muted mt-5 max-w-2xl text-lg leading-relaxed">
-          Notch is a research-quality market. Analysts stake on their RWA & meme theses;
+        <p className="text-muted mt-6 max-w-xl leading-relaxed">
+          Notch is a research-quality market. Analysts stake on their RWA &amp; meme theses;
           expert reviewers stake to grade them. The crowd&apos;s capital prices the
           truth — and the sharpest analysts earn on-chain reputation.
         </p>
-        <div className="flex gap-3 mt-7">
+        <div className="flex gap-3 mt-8">
           <Link href="/submit" className="btn-primary">
-            Submit research
+            Submit research →
           </Link>
-          <a href="#datanets" className="btn-ghost">
+          <a href="#datanets" className="btn-outline-orange">
             Explore datanets
           </a>
         </div>
@@ -55,7 +58,7 @@ export default function Home() {
           },
         ].map((s) => (
           <div key={s.n} className="card p-5">
-            <div className="text-lime font-mono text-sm mb-2">{s.n}</div>
+            <div className="text-orange font-mono text-sm mb-2">{s.n}</div>
             <div className="font-semibold mb-1.5">{s.t}</div>
             <p className="text-sm text-muted leading-relaxed">{s.d}</p>
           </div>
@@ -65,8 +68,8 @@ export default function Home() {
       {/* Datanets */}
       <section id="datanets" className="scroll-mt-6">
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-xl font-bold">Datanets</h2>
-          <span className="text-sm text-muted">{datanets.length} markets</span>
+          <h2 className="display text-3xl">Datanets</h2>
+          <span className="eyebrow">{datanets.length} markets</span>
         </div>
         {datanets.length === 0 ? (
           <EmptyHint />
@@ -76,12 +79,12 @@ export default function Home() {
               <Link
                 key={d.id}
                 href={`/datanet/${d.id}`}
-                className="card p-5 hover:border-lime/40 transition group"
+                className="card p-5 hover:border-orange/40 transition group"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold group-hover:text-lime transition">{d.name}</h3>
+                  <h3 className="font-semibold group-hover:text-orange transition">{d.name}</h3>
                   {d.minReviewerRep > 0n && (
-                    <span className="pill bg-lime/10 text-lime">
+                    <span className="pill bg-orange/10 text-orange">
                       🔒 {d.minReviewerRep.toString()} Reps
                     </span>
                   )}
@@ -100,7 +103,7 @@ export default function Home() {
       {/* Recent artifacts */}
       {recent.length > 0 && (
         <section>
-          <h2 className="text-xl font-bold mb-4">Latest research</h2>
+          <h2 className="display text-3xl mb-4">Latest research</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recent.map((a) => (
               <ArtifactCard

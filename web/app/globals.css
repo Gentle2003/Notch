@@ -7,43 +7,79 @@
 }
 
 html {
-  background-color: #0a0b0d;
+  background-color: #080808;
 }
 
 body {
-  color: #e8eaed;
+  color: #f0ede6;
   background-color: transparent;
   -webkit-font-smoothing: antialiased;
+  font-size: 14px;
 }
 
 @layer components {
+  /* editorial serif display, ClawBank-style */
+  .display {
+    @apply font-serif font-normal tracking-tight;
+  }
+  .em-serif {
+    @apply font-serif italic text-orange-text;
+    font-weight: 500;
+  }
+
+  /* small mono labels with letter-spacing */
+  .eyebrow {
+    @apply font-mono text-[11px] tracking-label text-muted uppercase;
+  }
+
   .card {
-    @apply bg-surface border border-border rounded-2xl;
+    @apply bg-surface border border-border rounded-[3px];
   }
   .btn {
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition;
+    @apply inline-flex items-center justify-center rounded-[3px] px-4 py-2.5 text-[13px]
+      font-medium transition-colors;
   }
   .btn-primary {
-    @apply btn bg-lime text-black hover:bg-lime-dim shadow-glow;
+    @apply btn bg-orange text-black hover:bg-orange-dim;
   }
   .btn-ghost {
-    @apply btn border border-border text-white hover:bg-surface-2;
+    @apply btn border border-border bg-surface-2 text-cream hover:border-cream/30;
+  }
+  .btn-outline-orange {
+    @apply btn border text-orange-text;
+    background-color: rgba(242, 122, 33, 0.06);
+    border-color: rgba(242, 122, 33, 0.55);
+  }
+  .btn-outline-orange:hover {
+    background-color: rgba(242, 122, 33, 0.12);
   }
   .btn-yes {
-    @apply btn bg-lime/15 text-lime border border-lime/40 hover:bg-lime/25;
+    @apply btn text-orange-text;
+    background-color: rgba(242, 122, 33, 0.08);
+    border: 1px solid rgba(242, 122, 33, 0.5);
+  }
+  .btn-yes:hover {
+    background-color: rgba(242, 122, 33, 0.16);
   }
   .btn-no {
-    @apply btn bg-no/10 text-no border border-no/40 hover:bg-no/20;
+    @apply btn;
+    color: #e0745a;
+    background-color: rgba(200, 83, 56, 0.08);
+    border: 1px solid rgba(200, 83, 56, 0.5);
+  }
+  .btn-no:hover {
+    background-color: rgba(200, 83, 56, 0.16);
   }
   .pill {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-[3px] px-2 py-1 text-[11px]
+      font-mono tracking-label;
   }
   .input {
-    @apply w-full rounded-xl bg-surface-2 border border-border px-3 py-2.5 text-sm text-white
-      placeholder:text-muted focus:outline-none focus:border-lime/60;
+    @apply w-full rounded-[3px] bg-surface-2 border border-border px-3 py-2.5 text-[13px]
+      text-cream font-mono placeholder:text-faint focus:outline-none focus:border-orange/60;
   }
   .label {
-    @apply block text-xs font-medium text-muted mb-1.5;
+    @apply block eyebrow mb-1.5;
   }
 }
 
@@ -53,6 +89,6 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2e35;
-  border-radius: 8px;
+  background: #262320;
+  border-radius: 0;
 }

@@ -8,7 +8,7 @@ export function ArtifactCard({ a, datanetName }: { a: Artifact; datanetName?: st
   return (
     <Link
       href={`/artifact/${a.id}`}
-      className="card p-4 block hover:border-lime/40 transition group"
+      className="card p-4 block hover:border-orange/40 transition group"
     >
       <div className="flex items-center justify-between mb-2">
         {datanetName ? (
@@ -18,7 +18,7 @@ export function ArtifactCard({ a, datanetName }: { a: Artifact; datanetName?: st
         )}
         {resolved ? (
           <span
-            className={`pill ${a.outcomeYes ? "bg-lime/15 text-lime" : "bg-no/15 text-no"}`}
+            className={`pill ${a.outcomeYes ? "bg-orange/15 text-orange" : "bg-no/15 text-no"}`}
           >
             {a.outcomeYes ? "✓ Verified" : "✗ Rejected"}
           </span>
@@ -27,7 +27,7 @@ export function ArtifactCard({ a, datanetName }: { a: Artifact; datanetName?: st
         )}
       </div>
 
-      <h3 className="font-semibold leading-snug mb-3 group-hover:text-lime transition">
+      <h3 className="font-semibold leading-snug mb-3 group-hover:text-orange transition">
         {a.title}
       </h3>
 

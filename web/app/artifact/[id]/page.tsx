@@ -36,7 +36,7 @@ export default function ArtifactPage({ params }: { params: Promise<{ id: string 
               </Link>
             )}
             {resolved && (
-              <span className={`pill ${a.outcomeYes ? "bg-lime/15 text-lime" : "bg-no/15 text-no"}`}>
+              <span className={`pill ${a.outcomeYes ? "bg-orange/15 text-orange" : "bg-no/15 text-no"}`}>
                 {a.outcomeYes ? "✓ Verified" : "✗ Rejected"}
               </span>
             )}
@@ -55,7 +55,7 @@ export default function ArtifactPage({ params }: { params: Promise<{ id: string 
               href={a.contentURI.startsWith("http") ? a.contentURI : undefined}
               target="_blank"
               rel="noreferrer"
-              className="text-lime break-all hover:underline"
+              className="text-orange break-all hover:underline"
             >
               {a.contentURI}
             </a>
@@ -69,7 +69,7 @@ export default function ArtifactPage({ params }: { params: Promise<{ id: string 
           <ConsensusBar yesStake={a.yesStake} noStake={a.noStake} />
           <div className="grid grid-cols-3 gap-4 mt-5 text-center">
             <Stat label="Submitter stake" value={`${fmtToken(a.submitStake)}`} />
-            <Stat label="YES pool" value={`${fmtToken(a.yesStake)}`} accent="lime" />
+            <Stat label="YES pool" value={`${fmtToken(a.yesStake)}`} accent="orange" />
             <Stat label="NO pool" value={`${fmtToken(a.noStake)}`} accent="no" />
           </div>
         </div>
@@ -93,12 +93,12 @@ function Stat({
 }: {
   label: string;
   value: string;
-  accent?: "lime" | "no";
+  accent?: "orange" | "no";
 }) {
   return (
     <div>
       <div
-        className={`text-lg font-bold ${accent === "lime" ? "text-lime" : accent === "no" ? "text-no" : "text-white"}`}
+        className={`text-lg font-bold ${accent === "orange" ? "text-orange" : accent === "no" ? "text-no" : "text-white"}`}
       >
         {value}
       </div>

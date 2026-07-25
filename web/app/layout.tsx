@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { IBM_Plex_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Header } from "@/components/Header";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-mono",
+});
+
+const serif = Fraunces({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+});
 
 export const metadata: Metadata = {
   title: "Notch — stake on the signal",
@@ -18,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="min-h-screen">
+    <html lang="en" className={`${mono.variable} ${serif.variable}`}>
+      <body className="min-h-screen font-mono">
         <Providers>
           <div className="mx-auto max-w-6xl px-4 pb-24">
             <Header />

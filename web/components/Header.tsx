@@ -11,7 +11,7 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2.5">
           <Logo />
           <span className="text-lg font-bold tracking-tight">
-            Notch<span className="text-lime">.</span>
+            Notch<span className="text-orange">.</span>
           </span>
         </Link>
         <nav className="hidden gap-6 text-sm text-muted sm:flex">

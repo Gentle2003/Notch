@@ -26,7 +26,7 @@ export default function DatanetPage({ params }: { params: Promise<{ id: string }
             <h1 className="text-2xl font-bold flex items-center gap-2">
               {d?.name ?? `Datanet #${datanetId}`}
               {d && d.minReviewerRep > 0n && (
-                <span className="pill bg-lime/10 text-lime">🔒 {d.minReviewerRep.toString()} Reps to review</span>
+                <span className="pill bg-orange/10 text-orange">🔒 {d.minReviewerRep.toString()} Reps to review</span>
               )}
             </h1>
             {d && <p className="text-muted mt-1.5 max-w-2xl">{d.description}</p>}
