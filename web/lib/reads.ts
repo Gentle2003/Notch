@@ -13,7 +13,8 @@ import { getDeployment } from "./contracts";
  */
 export function useTargetChain() {
   const { chainId: walletChain } = useAccount();
-  const fallback = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN ?? "31337");
+  // Defaults to Robinhood testnet (live network); local dev sets 31337 via .env.local.
+  const fallback = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN ?? "46630");
   const chainId = walletChain ?? fallback;
   const deployment = getDeployment(chainId);
   return { chainId, deployment, market: deployment?.NotchMarket as Address | undefined };

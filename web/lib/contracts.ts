@@ -19,7 +19,12 @@ export const deployments: Record<number, Deployment> = {
     Reputation: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
     NotchMarket: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
   },
-  // 46630: filled after testnet deploy
+  // Robinhood Chain testnet — deployed 2026-07-25
+  46630: {
+    NotchToken: "0xDc4d866c407521219B511e5d9e1AE583BB396674",
+    Reputation: "0x984FBe6f007ea6Fd085E9A244F78cFC6b9705F4E",
+    NotchMarket: "0x104540Cc7B00a42d98919bb2Ee16535F57541FD7",
+  },
 };
 
 export function getDeployment(chainId: number | undefined): Deployment | null {
