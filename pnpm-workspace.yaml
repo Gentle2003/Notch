@@ -1,0 +1,10 @@
+packages:
+  - "web"
+  - "packages/*"
+
+# Native optional builds — all have JS fallbacks, so we skip compiling them.
+allowBuilds:
+  bufferutil: false
+  keccak: false
+  sharp: false
+  utf-8-validate: false

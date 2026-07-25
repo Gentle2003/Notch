@@ -1,0 +1,22 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# next
+web/.next/
+web/out/
+web/next-env.d.ts
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# env / secrets
+.env
+.env.local
+contracts/.env
+
+# misc
+.DS_Store
+*.log

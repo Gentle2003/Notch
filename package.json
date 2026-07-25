@@ -1,0 +1,14 @@
+{
+  "name": "notch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Notch — a research-quality staking market on Robinhood Chain. Stake on the signal, earn reputation.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "pnpm --filter @notch/web dev",
+    "build": "pnpm --filter @notch/web build",
+    "contracts:test": "cd contracts && forge test",
+    "contracts:build": "cd contracts && forge build"
+  },
+  "packageManager": "pnpm@11.13.1"
+}
