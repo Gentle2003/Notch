@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useDatanets, useArtifacts } from "@/lib/reads";
 import { fmtToken } from "@/lib/format";
 import { ArtifactCard } from "@/components/ArtifactCard";
@@ -15,26 +16,40 @@ export default function Home() {
   return (
     <main className="space-y-14">
       {/* Hero */}
-      <section className="pt-10 pb-6">
-        <div className="eyebrow mb-6">
-          <span className="text-orange">●</span> Live on Robinhood Chain — RWA × Meme research
+      <section className="pt-10 pb-6 grid lg:grid-cols-[1fr_auto] gap-10 items-center">
+        <div>
+          <div className="eyebrow mb-6">
+            <span className="text-orange">●</span> Live on Robinhood Chain — RWA × Meme research
+          </div>
+          <h1 className="display text-5xl sm:text-6xl leading-[1.02]">
+            Stake on the <span className="em-serif">signal</span>,
+            <br className="hidden sm:block" /> not the noise.
+          </h1>
+          <p className="text-muted mt-6 max-w-xl leading-relaxed">
+            Notch is a research-quality market. Analysts stake on their RWA &amp; meme theses;
+            expert reviewers stake to grade them. The crowd&apos;s capital prices the
+            truth — and the sharpest analysts earn on-chain reputation.
+          </p>
+          <div className="flex gap-3 mt-8">
+            <Link href="/submit" className="btn-primary">
+              Submit research →
+            </Link>
+            <a href="#datanets" className="btn-outline-orange">
+              Explore datanets
+            </a>
+          </div>
         </div>
-        <h1 className="display text-5xl sm:text-6xl leading-[1.02] max-w-3xl">
-          Stake on the <span className="em-serif">signal</span>,
-          <br className="hidden sm:block" /> not the noise.
-        </h1>
-        <p className="text-muted mt-6 max-w-xl leading-relaxed">
-          Notch is a research-quality market. Analysts stake on their RWA &amp; meme theses;
-          expert reviewers stake to grade them. The crowd&apos;s capital prices the
-          truth — and the sharpest analysts earn on-chain reputation.
-        </p>
-        <div className="flex gap-3 mt-8">
-          <Link href="/submit" className="btn-primary">
-            Submit research →
-          </Link>
-          <a href="#datanets" className="btn-outline-orange">
-            Explore datanets
-          </a>
+
+        {/* Badger mascot */}
+        <div className="hidden lg:block relative w-[320px] h-[320px] shrink-0">
+          <Image
+            src="/notch-badger.png"
+            alt="Notch — the badger that digs for signal"
+            fill
+            sizes="320px"
+            priority
+            className="object-cover rounded-[3px] border border-border"
+          />
         </div>
       </section>
 

@@ -20,6 +20,23 @@ export const metadata: Metadata = {
   title: "Notch — stake on the signal",
   description:
     "A research-quality staking market on Robinhood Chain. Researchers stake on their analysis; expert reviewers stake to grade it; the best earn reputation.",
+  icons: {
+    icon: "/notch-logo.jpg",
+    apple: "/notch-logo.jpg",
+  },
+  openGraph: {
+    title: "Notch — stake on the signal",
+    description:
+      "A research-quality staking market on Robinhood Chain. Stake on the signal, not the noise.",
+    images: ["/notch-badger.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Notch — stake on the signal",
+    description:
+      "A research-quality staking market on Robinhood Chain. Stake on the signal, not the noise.",
+    images: ["/notch-badger.png"],
+  },
 };
 
 export default function RootLayout({
