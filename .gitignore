@@ -20,3 +20,6 @@ contracts/.env
 # misc
 .DS_Store
 *.log
+.vercel
+.env*
+!.env.example
