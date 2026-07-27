@@ -28,14 +28,14 @@ export const metadata: Metadata = {
     title: "Notch — stake on the signal",
     description:
       "A research-quality staking market on Robinhood Chain. Stake on the signal, not the noise.",
-    images: ["/notch-badger.png"],
+    images: ["/notch-badger-banner.jpg"],
   },
   twitter: {
     card: "summary_large_image",
     title: "Notch — stake on the signal",
     description:
       "A research-quality staking market on Robinhood Chain. Stake on the signal, not the noise.",
-    images: ["/notch-badger.png"],
+    images: ["/notch-badger-banner.jpg"],
   },
 };
 
