@@ -47,28 +47,28 @@ body {
   }
   .btn-outline-orange {
     @apply btn border text-orange-text;
-    background-color: rgba(242, 122, 33, 0.06);
-    border-color: rgba(242, 122, 33, 0.55);
+    background-color: rgba(250, 81, 1, 0.07);
+    border-color: rgba(250, 81, 1, 0.55);
   }
   .btn-outline-orange:hover {
-    background-color: rgba(242, 122, 33, 0.12);
+    background-color: rgba(250, 81, 1, 0.14);
   }
   .btn-yes {
     @apply btn text-orange-text;
-    background-color: rgba(242, 122, 33, 0.08);
-    border: 1px solid rgba(242, 122, 33, 0.5);
+    background-color: rgba(250, 81, 1, 0.09);
+    border: 1px solid rgba(250, 81, 1, 0.5);
   }
   .btn-yes:hover {
-    background-color: rgba(242, 122, 33, 0.16);
+    background-color: rgba(250, 81, 1, 0.18);
   }
   .btn-no {
     @apply btn;
-    color: #e0745a;
-    background-color: rgba(200, 83, 56, 0.08);
-    border: 1px solid rgba(200, 83, 56, 0.5);
+    color: #b5aca4;
+    background-color: rgba(140, 130, 121, 0.1);
+    border: 1px solid rgba(140, 130, 121, 0.45);
   }
   .btn-no:hover {
-    background-color: rgba(200, 83, 56, 0.16);
+    background-color: rgba(140, 130, 121, 0.2);
   }
   .pill {
     @apply inline-flex items-center gap-1.5 rounded-[3px] px-2 py-1 text-[11px]
@@ -80,6 +80,48 @@ body {
   }
   .label {
     @apply block eyebrow mb-1.5;
+  }
+}
+
+/* Light sweeping across the badger panel every few seconds. */
+.sheen {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 45%,
+    rgba(255, 255, 255, 0.16) 50%,
+    rgba(255, 255, 255, 0.08) 55%,
+    transparent 100%
+  );
+  filter: blur(6px);
+  animation: sheenSweep 7s ease-in-out infinite;
+}
+
+@keyframes sheenSweep {
+  0%,
+  62% {
+    transform: translateX(0);
+  }
+  92%,
+  100% {
+    transform: translateX(420%);
+  }
+}
+
+/* Respect users who prefer less motion — kill the ambient animations. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-breathe,
+  .animate-aura,
+  .animate-blink,
+  .sheen {
+    animation: none !important;
+  }
+  .sheen {
+    display: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
   }
 }
 

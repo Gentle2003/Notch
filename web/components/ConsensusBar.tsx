@@ -16,9 +16,9 @@ export function ConsensusBar({
         <span className="text-orange font-semibold">{yesPct.toFixed(0)}% signal</span>
         <span className="text-no font-semibold">{(100 - yesPct).toFixed(0)}% noise</span>
       </div>
-      <div className="h-2 rounded-full bg-no/30 overflow-hidden">
+      <div className="h-2 rounded-[2px] bg-no/25 overflow-hidden">
         <div
-          className="h-full bg-orange rounded-full transition-all"
+          className="h-full bg-orange rounded-[2px] transition-all duration-500"
           style={{ width: `${yesPct}%` }}
         />
       </div>

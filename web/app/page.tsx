@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useDatanets, useArtifacts } from "@/lib/reads";
+import { BadgerHero } from "@/components/BadgerHero";
 import { fmtToken } from "@/lib/format";
 import { ArtifactCard } from "@/components/ArtifactCard";
 
@@ -41,15 +41,8 @@ export default function Home() {
         </div>
 
         {/* Badger mascot */}
-        <div className="hidden lg:block relative w-[320px] h-[320px] shrink-0">
-          <Image
-            src="/notch-badger.png"
-            alt="Notch — the badger that digs for signal"
-            fill
-            sizes="320px"
-            priority
-            className="object-cover rounded-[3px] border border-border"
-          />
+        <div className="hidden lg:block">
+          <BadgerHero size={340} />
         </div>
       </section>
 
