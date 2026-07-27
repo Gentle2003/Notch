@@ -2,6 +2,13 @@ packages:
   - "web"
   - "packages/*"
 
+# RainbowKit's QR component (cuer@0.0.3) declares `qr: "~0"`, so it drifts onto
+# qr@0.6.0 — which added a `border <= 0` guard that cuer trips, throwing
+# "invalid border=0" the moment the WalletConnect QR renders. 0.5.0 is the last
+# release without that guard. Revisit when cuer/RainbowKit tighten the range.
+overrides:
+  qr: 0.5.0
+
 # Native optional builds — all have JS fallbacks, so we skip compiling them.
 allowBuilds:
   bufferutil: false

@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  qr: 0.5.0
+
 importers:
 
   .: {}
@@ -2131,8 +2134,8 @@ packages:
   pump@3.0.4:
     resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
 
-  qr@0.6.0:
-    resolution: {integrity: sha512-P23VoX7SipHALdiIYG+D+LT/6n22dNKwV92FAb3d+Nlki/5WisSsfLt0UDFz2XEBtuwrECTznvu+chKKFCSYhA==}
+  qr@0.5.0:
+    resolution: {integrity: sha512-LtnyJsepKCMzfmHBZKVNo1g29kS+8ZbuxE9294EsRhHgVVpy4x8eFw9o4J9SIolDHoDYuaEIY+z8UjiCv/eudA==}
     engines: {node: '>= 20.19.0'}
 
   qrcode@1.5.3:
@@ -4886,7 +4889,7 @@ snapshots:
 
   cuer@0.0.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(typescript@5.9.3):
     dependencies:
-      qr: 0.6.0
+      qr: 0.5.0
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
     optionalDependencies:
@@ -5618,7 +5621,7 @@ snapshots:
       end-of-stream: 1.4.5
       once: 1.4.0
 
-  qr@0.6.0: {}
+  qr@0.5.0: {}
 
   qrcode@1.5.3:
     dependencies:
