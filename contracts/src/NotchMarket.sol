@@ -48,6 +48,10 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         Status status;
         bool outcomeYes; // valid once Resolved
         bool submitterClaimed;
+        // Progress of the payout sweep. Appended at the end so the struct's existing
+        // field order (and the getArtifact tuple) stays stable for readers.
+        uint256 claimedWinWeight; // winning-side weight that has already claimed
+        uint256 distributedLosePool; // losing pool paid out so far
     }
 
     struct Review {
@@ -151,7 +155,9 @@ contract NotchMarket is Ownable, ReentrancyGuard {
                 noStake: 0,
                 status: Status.Reviewing,
                 outcomeYes: false,
-                submitterClaimed: false
+                submitterClaimed: false,
+                claimedWinWeight: 0,
+                distributedLosePool: 0
             })
         );
 
@@ -210,47 +216,39 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         uint256 payout;
         uint256 reps;
 
-        if (a.outcomeYes) {
-            // Winners: submitter (weight = submitStake) + YES reviewers. Losing pool = noStake.
-            uint256 winWeight = a.submitStake + a.yesStake;
-            uint256 losePool = a.noStake;
+        (uint256 winWeight, uint256 losePool) = a.outcomeYes
+            ? (a.submitStake + a.yesStake, a.noStake)
+            : (a.noStake, a.yesStake + a.submitStake);
 
-            if (msg.sender == a.submitter && !a.submitterClaimed) {
-                a.submitterClaimed = true;
-                uint256 w = a.submitStake;
-                payout += w + (winWeight == 0 ? 0 : (losePool * w) / winWeight);
-                reps += (w * repPerToken) / 1 ether;
+        // Weight this caller contributes to the winning side (0 if they lost).
+        uint256 myWeight;
+
+        if (msg.sender == a.submitter && !a.submitterClaimed) {
+            a.submitterClaimed = true;
+            if (a.outcomeYes) myWeight += a.submitStake; // else: slashed, closes their record
+        }
+
+        Review storage r = reviews[artifactId][msg.sender];
+        if (!r.claimed && (r.yesAmount > 0 || r.noAmount > 0)) {
+            r.claimed = true;
+            myWeight += a.outcomeYes ? r.yesAmount : r.noAmount;
+        }
+
+        if (myWeight > 0) {
+            uint256 share = winWeight == 0 ? 0 : (losePool * myWeight) / winWeight;
+            a.claimedWinWeight += myWeight;
+            a.distributedLosePool += share;
+
+            // Integer division truncates, so the shares can sum to less than losePool.
+            // The final winner to claim sweeps whatever is left, which keeps the escrow
+            // draining to exactly zero instead of stranding dust forever.
+            if (a.claimedWinWeight == winWeight) {
+                share += losePool - a.distributedLosePool;
+                a.distributedLosePool = losePool;
             }
 
-            Review storage r = reviews[artifactId][msg.sender];
-            if (!r.claimed && r.yesAmount > 0) {
-                r.claimed = true;
-                uint256 w = r.yesAmount;
-                payout += w + (winWeight == 0 ? 0 : (losePool * w) / winWeight);
-                reps += (w * repPerToken) / 1 ether;
-            } else if (!r.claimed && r.noAmount > 0) {
-                // Losing NO reviewer: mark claimed so they can't retry; payout stays 0.
-                r.claimed = true;
-            }
-        } else {
-            // Winners: NO reviewers. Losing pool = yesStake + slashed submitStake.
-            uint256 winWeight = a.noStake;
-            uint256 losePool = a.yesStake + a.submitStake;
-
-            // Submitter lost: mark claimed to close their record, no payout.
-            if (msg.sender == a.submitter && !a.submitterClaimed) {
-                a.submitterClaimed = true;
-            }
-
-            Review storage r = reviews[artifactId][msg.sender];
-            if (!r.claimed && r.noAmount > 0) {
-                r.claimed = true;
-                uint256 w = r.noAmount;
-                payout += w + (winWeight == 0 ? 0 : (losePool * w) / winWeight);
-                reps += (w * repPerToken) / 1 ether;
-            } else if (!r.claimed && r.yesAmount > 0) {
-                r.claimed = true; // losing YES reviewer
-            }
+            payout = myWeight + share;
+            reps = (myWeight * repPerToken) / 1 ether;
         }
 
         require(payout > 0 || reps > 0, "nothing to claim");

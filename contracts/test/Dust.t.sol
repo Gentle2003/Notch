@@ -36,9 +36,10 @@ contract DustTest is Test {
     }
 
     /// Awkward ratio: YES wins (yes=2 >= no=2, ties go YES), so winWeight is
-    /// submitStake(1) + yesStake(2) = 3 and losePool is 2. Each winner's cut is
-    /// 2*1/3 = 0 after truncation, so the whole 2 wei losing pool is stranded.
-    function test_dustRemainsOnUnevenSplit() public {
+    /// submitStake(1) + yesStake(2) = 3 and losePool is 2. Each winner's pro-rata cut
+    /// truncates to 2*1/3 = 0, which previously stranded the whole 2 wei losing pool.
+    /// The final winner to claim now sweeps the remainder, so it drains to zero.
+    function test_noDustOnUnevenSplit() public {
         vm.prank(researcher);
         uint256 id = market.submitArtifact(dn, "t", "uri", 1 wei);
 
@@ -63,8 +64,7 @@ contract DustTest is Test {
 
         uint256 residual = token.balanceOf(address(market));
         emit log_named_uint("residual wei stuck in contract", residual);
-        // Documents actual behaviour rather than asserting the ideal.
-        assertEq(residual, 2, "whole losing pool stranded by truncation");
+        assertEq(residual, 0, "remainder must be swept by the final claimer");
     }
 
     /// Sanity: an evenly-divisible split really does drain to zero.
