@@ -27,8 +27,8 @@ export const metadata: Metadata = {
     "A research-quality staking market on Robinhood Chain. Researchers stake on their analysis; expert reviewers stake to grade it; the best earn reputation.",
   alternates: { canonical: "/" },
   icons: {
-    icon: "/notch-logo.jpg",
-    apple: "/notch-logo.jpg",
+    icon: "/notch-logo-v2.jpg",
+    apple: "/notch-logo-v2.jpg",
   },
   openGraph: {
     type: "website",

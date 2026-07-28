@@ -38,7 +38,7 @@ const connectors = connectorsForWallets(
     appName: "Notch",
     appDescription: "Stake on the signal, not the noise.",
     appUrl: APP_URL,
-    appIcon: `${APP_URL}/notch-logo.jpg`,
+    appIcon: `${APP_URL}/notch-logo-v2.jpg`,
     projectId,
   },
 );
