@@ -47,6 +47,13 @@ contract Deploy is Script {
             0
         );
         market.createDatanet(
+            "Protocol & Launchpad",
+            "Tokenomics, emissions, fee design and launch quality for new protocols. Reviewers should be able to read a contract or a fee model.",
+            25 ether,
+            3 days,
+            0
+        );
+        market.createDatanet(
             "Expert Desk",
             "Reputation-gated: only proven analysts (>= 50 Reps) may review here.",
             50 ether,

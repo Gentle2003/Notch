@@ -9,6 +9,7 @@ import {NotchMarket} from "../src/NotchMarket.sol";
 /// @notice Probes whether the pro-rata split leaves unclaimable dust when the
 ///         losing pool does NOT divide evenly across the winning side.
 contract DustTest is Test {
+    bytes32 constant CONTENT_HASH = keccak256("analysis-v1");
     NotchToken token;
     Reputation rep;
     NotchMarket market;
@@ -41,7 +42,7 @@ contract DustTest is Test {
     /// The final winner to claim now sweeps the remainder, so it drains to zero.
     function test_noDustOnUnevenSplit() public {
         vm.prank(researcher);
-        uint256 id = market.submitArtifact(dn, "t", "uri", 1 wei);
+        uint256 id = market.submitArtifact(dn, "t", "uri", CONTENT_HASH, 1 wei);
 
         vm.prank(a);
         market.review(id, true, 1 wei); // YES
@@ -70,7 +71,7 @@ contract DustTest is Test {
     /// Sanity: an evenly-divisible split really does drain to zero.
     function test_noDustOnEvenSplit() public {
         vm.prank(researcher);
-        uint256 id = market.submitArtifact(dn, "t", "uri", 10 ether);
+        uint256 id = market.submitArtifact(dn, "t", "uri", CONTENT_HASH, 10 ether);
 
         vm.prank(a);
         market.review(id, true, 20 ether);

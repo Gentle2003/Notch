@@ -9,6 +9,7 @@ import { useApproveAndWrite } from "@/lib/useApproveAndWrite";
 import { notchMarketAbi } from "@/lib/abis";
 import { Faucet } from "@/components/Faucet";
 import { fmtToken } from "@/lib/format";
+import { hashContent, ZERO_HASH } from "@/lib/verify";
 
 function SubmitForm() {
   const { address } = useAccount();
@@ -21,12 +22,35 @@ function SubmitForm() {
   const [title, setTitle] = useState("");
   const [uri, setUri] = useState("");
   const [stake, setStake] = useState("25");
+  const [contentHash, setContentHash] = useState<string>(ZERO_HASH);
+  const [hashState, setHashState] = useState<"idle" | "hashing" | "ok" | "failed">("idle");
   const [submitting, setSubmitting] = useState(false);
 
   const selected = datanets.find((d) => d.id === datanetId);
   const minStake = selected ? Number(fmtToken(selected.minSubmitStake).replace(/,/g, "")) : 0;
   const belowMin = Number(stake) < minStake;
   const needsApproval = w.needsApproval(stake);
+
+  // Snapshot the source so reviewers can later detect edits. If the fetch is
+  // blocked (CORS is common on X/Twitter), we submit without a commitment
+  // rather than failing — but the UI says so plainly.
+  const snapshot = async () => {
+    if (!uri || !/^https?:\/\//.test(uri)) {
+      setContentHash(ZERO_HASH);
+      setHashState("idle");
+      return;
+    }
+    setHashState("hashing");
+    try {
+      const res = await fetch(uri);
+      if (!res.ok) throw new Error(String(res.status));
+      setContentHash(hashContent(await res.text()));
+      setHashState("ok");
+    } catch {
+      setContentHash(ZERO_HASH);
+      setHashState("failed");
+    }
+  };
 
   const submit = async () => {
     if (!w.market) return;
@@ -37,7 +61,7 @@ function SubmitForm() {
         address: w.market,
         abi: notchMarketAbi,
         functionName: "submitArtifact",
-        args: [BigInt(datanetId), title, uri, parseEther(stake)],
+        args: [BigInt(datanetId), title, uri, contentHash as `0x${string}`, parseEther(stake)],
         chainId: w.chainId,
       });
       w.setHash(h);
@@ -93,7 +117,23 @@ function SubmitForm() {
             placeholder="https://…"
             value={uri}
             onChange={(e) => setUri(e.target.value)}
+            onBlur={snapshot}
           />
+          {hashState === "hashing" && (
+            <p className="text-[11px] text-muted mt-1.5">Snapshotting content…</p>
+          )}
+          {hashState === "ok" && (
+            <p className="text-[11px] text-orange mt-1.5">
+              ✓ Content hashed. Reviewers will be warned if the source changes after you submit.
+            </p>
+          )}
+          {hashState === "failed" && (
+            <p className="text-[11px] text-muted mt-1.5">
+              Couldn&apos;t read that URL from the browser (CORS or unreachable), so no hash
+              will be committed. Reviewers won&apos;t be able to detect later edits — consider
+              an archive link or IPFS.
+            </p>
+          )}
         </div>
 
         <div>

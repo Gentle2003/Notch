@@ -6,6 +6,7 @@ import { useArtifact, useDatanets } from "@/lib/reads";
 import { ConsensusBar } from "@/components/ConsensusBar";
 import { StakePanel } from "@/components/StakePanel";
 import { Faucet } from "@/components/Faucet";
+import { IntegrityBadge } from "@/components/IntegrityBadge";
 import { fmtToken, shortAddr, timeLeft } from "@/lib/format";
 
 export default function ArtifactPage({ params }: { params: Promise<{ id: string }> }) {
@@ -49,7 +50,10 @@ export default function ArtifactPage({ params }: { params: Promise<{ id: string 
         </div>
 
         <div className="card p-5">
-          <h2 className="text-sm font-semibold text-muted mb-2">Analysis</h2>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="text-sm font-semibold text-muted">Analysis</h2>
+            <IntegrityBadge uri={a.contentURI} contentHash={a.contentHash} />
+          </div>
           {a.contentURI ? (
             <a
               href={a.contentURI.startsWith("http") ? a.contentURI : undefined}
@@ -62,6 +66,9 @@ export default function ArtifactPage({ params }: { params: Promise<{ id: string 
           ) : (
             <p className="text-muted text-sm">No content link provided.</p>
           )}
+          <div className="mt-3 pt-3 border-t border-border">
+            <IntegrityBadge uri={a.contentURI} contentHash={a.contentHash} showDetail />
+          </div>
         </div>
 
         <div className="card p-5">

@@ -36,6 +36,7 @@ export type Artifact = {
   submitter: Address;
   title: string;
   contentURI: string;
+  contentHash: string; // keccak256 committed at submission; ZERO_HASH if none
   submitStake: bigint;
   reviewDeadline: bigint;
   yesStake: bigint;

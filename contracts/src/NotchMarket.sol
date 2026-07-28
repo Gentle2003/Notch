@@ -40,7 +40,12 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         uint256 datanetId;
         address submitter;
         string title;
-        string contentURI; // ipfs://… or https://… pointer to full analysis + a content hash
+        string contentURI; // ipfs://… or https://… pointer to the full analysis
+        // keccak256 of the analysis as it read at submission. The chain cannot fetch a
+        // URL, so this is the submitter's commitment: readers re-fetch, re-hash, and
+        // compare. A mismatch proves the content changed after stakes were placed.
+        // bytes32(0) means the submitter declined to commit — treat as unverifiable.
+        bytes32 contentHash;
         uint256 submitStake;
         uint64 reviewDeadline;
         uint256 yesStake; // total reviewer stake on YES
@@ -85,6 +90,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         address indexed submitter,
         string title,
         string contentURI,
+        bytes32 contentHash,
         uint256 submitStake,
         uint64 reviewDeadline
     );
@@ -134,6 +140,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         uint256 datanetId,
         string calldata title,
         string calldata contentURI,
+        bytes32 contentHash,
         uint256 stakeAmount
     ) external nonReentrant returns (uint256 artifactId) {
         Datanet storage d = datanets[datanetId];
@@ -149,6 +156,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
                 submitter: msg.sender,
                 title: title,
                 contentURI: contentURI,
+                contentHash: contentHash,
                 submitStake: stakeAmount,
                 reviewDeadline: deadline,
                 yesStake: 0,
@@ -163,7 +171,14 @@ contract NotchMarket is Ownable, ReentrancyGuard {
 
         collateral.safeTransferFrom(msg.sender, address(this), stakeAmount);
         emit ArtifactSubmitted(
-            artifactId, datanetId, msg.sender, title, contentURI, stakeAmount, deadline
+            artifactId,
+            datanetId,
+            msg.sender,
+            title,
+            contentURI,
+            contentHash,
+            stakeAmount,
+            deadline
         );
     }
 

@@ -7,6 +7,7 @@ import {Reputation} from "../src/Reputation.sol";
 import {NotchMarket} from "../src/NotchMarket.sol";
 
 contract NotchMarketTest is Test {
+    bytes32 constant CONTENT_HASH = keccak256("analysis-v1");
     NotchToken token;
     Reputation rep;
     NotchMarket market;
@@ -39,7 +40,7 @@ contract NotchMarketTest is Test {
 
     function _submit(uint256 stake) internal returns (uint256 id) {
         vm.prank(researcher);
-        id = market.submitArtifact(datanetId, "GOLD RWA thesis", "ipfs://cid", stake);
+        id = market.submitArtifact(datanetId, "GOLD RWA thesis", "ipfs://cid", CONTENT_HASH, stake);
     }
 
     function test_faucet() public {
@@ -55,7 +56,7 @@ contract NotchMarketTest is Test {
     function test_submitStakeTooLow() public {
         vm.prank(researcher);
         vm.expectRevert(bytes("stake too low"));
-        market.submitArtifact(datanetId, "t", "uri", 1 ether);
+        market.submitArtifact(datanetId, "t", "uri", CONTENT_HASH, 1 ether);
     }
 
     function test_submitterCannotReview() public {
@@ -188,7 +189,7 @@ contract NotchMarketTest is Test {
         // datanet requiring 5 rep to review
         uint256 gated = market.createDatanet("Experts only", "gated", 10 ether, 3 days, 5);
         vm.prank(researcher);
-        uint256 id = market.submitArtifact(gated, "t", "uri", 10 ether);
+        uint256 id = market.submitArtifact(gated, "t", "uri", CONTENT_HASH, 10 ether);
 
         vm.prank(alice); // alice has 0 rep
         vm.expectRevert(bytes("insufficient rep"));

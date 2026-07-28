@@ -66,6 +66,11 @@ export const notchMarketAbi = [
         "internalType": "string"
       },
       {
+        "name": "contentHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
         "name": "submitStake",
         "type": "uint256",
         "internalType": "uint256"
@@ -99,6 +104,16 @@ export const notchMarketAbi = [
         "name": "submitterClaimed",
         "type": "bool",
         "internalType": "bool"
+      },
+      {
+        "name": "claimedWinWeight",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "distributedLosePool",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -281,6 +296,11 @@ export const notchMarketAbi = [
             "internalType": "string"
           },
           {
+            "name": "contentHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
             "name": "submitStake",
             "type": "uint256",
             "internalType": "uint256"
@@ -314,6 +334,16 @@ export const notchMarketAbi = [
             "name": "submitterClaimed",
             "type": "bool",
             "internalType": "bool"
+          },
+          {
+            "name": "claimedWinWeight",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "distributedLosePool",
+            "type": "uint256",
+            "internalType": "uint256"
           }
         ]
       }
@@ -510,6 +540,11 @@ export const notchMarketAbi = [
         "internalType": "string"
       },
       {
+        "name": "contentHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
         "name": "stakeAmount",
         "type": "uint256",
         "internalType": "uint256"
@@ -570,6 +605,12 @@ export const notchMarketAbi = [
         "type": "string",
         "indexed": false,
         "internalType": "string"
+      },
+      {
+        "name": "contentHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
       },
       {
         "name": "submitStake",
