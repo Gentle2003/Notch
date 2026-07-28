@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useDatanets, useArtifacts } from "@/lib/reads";
+import { useDatanets, useArtifacts, useTargetChain } from "@/lib/reads";
 import { BadgerHero } from "@/components/BadgerHero";
+import { CopyAddress } from "@/components/CopyAddress";
 import { fmtToken } from "@/lib/format";
 import { ArtifactCard } from "@/components/ArtifactCard";
 
 export default function Home() {
   const { datanets } = useDatanets();
+  const { deployment } = useTargetChain();
   const { artifacts } = useArtifacts();
 
   const countFor = (id: number) => artifacts.filter((a) => a.datanetId === id).length;
@@ -21,6 +23,11 @@ export default function Home() {
           <div className="eyebrow mb-6">
             <span className="text-orange">●</span> Live on Robinhood Chain — RWA × Meme research
           </div>
+          {deployment && (
+            <div className="mb-6 -mt-3">
+              <CopyAddress address={deployment.NotchToken} />
+            </div>
+          )}
           <h1 className="display text-5xl sm:text-6xl leading-[1.02]">
             Stake on the <span className="em-serif">signal</span>,
             <br className="hidden sm:block" /> not the noise.

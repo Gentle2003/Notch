@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 const mono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -60,6 +61,7 @@ export default function RootLayout({
           <div className="mx-auto max-w-6xl px-4 pb-24">
             <Header />
             {children}
+            <Footer />
           </div>
         </Providers>
       </body>
