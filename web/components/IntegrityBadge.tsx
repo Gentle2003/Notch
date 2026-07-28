@@ -41,21 +41,18 @@ const COPY: Record<Integrity, { label: string; detail: string; cls: string }> = 
 export function IntegrityBadge({
   uri,
   contentHash,
-  showDetail = false,
+  variant = "pill",
 }: {
   uri?: string;
   contentHash?: string;
-  showDetail?: boolean;
+  /** "pill" for the scannable chip; "detail" for the explanatory line beneath it. */
+  variant?: "pill" | "detail";
 }) {
   const state = useIntegrity(uri, contentHash);
   const c = COPY[state];
 
-  return (
-    <div className={showDetail ? "space-y-1.5" : undefined}>
-      <span className={`pill ${c.cls}`}>{c.label}</span>
-      {showDetail && (
-        <p className="text-[11px] text-muted leading-relaxed max-w-prose">{c.detail}</p>
-      )}
-    </div>
-  );
+  if (variant === "detail") {
+    return <p className="text-[11px] text-muted leading-relaxed max-w-prose">{c.detail}</p>;
+  }
+  return <span className={`pill ${c.cls}`}>{c.label}</span>;
 }

@@ -71,7 +71,7 @@ export function ArtifactView({ id }: { id: number }) {
             <p className="text-muted text-sm">No content link provided.</p>
           )}
           <div className="mt-3 pt-3 border-t border-border">
-            <IntegrityBadge uri={a.contentURI} contentHash={a.contentHash} showDetail />
+            <IntegrityBadge uri={a.contentURI} contentHash={a.contentHash} variant="detail" />
           </div>
         </div>
 
