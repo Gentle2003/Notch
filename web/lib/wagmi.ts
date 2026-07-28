@@ -8,7 +8,7 @@ import {
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http } from "wagmi";
-import { robinhoodTestnet, robinhoodMainnet, anvil } from "./chains";
+import { robinhoodTestnet, robinhoodMainnet } from "./chains";
 
 // WalletConnect / Reown project id. This is a PUBLIC identifier — it ships in the
 // browser bundle regardless, so it lives in source and needs no env config.
@@ -44,11 +44,10 @@ const connectors = connectorsForWallets(
 );
 
 export const wagmiConfig = createConfig({
-  chains: [robinhoodTestnet, anvil, robinhoodMainnet],
+  chains: [robinhoodTestnet, robinhoodMainnet],
   connectors,
   transports: {
     [robinhoodTestnet.id]: http(),
-    [anvil.id]: http(),
     [robinhoodMainnet.id]: http(),
   },
   ssr: true,

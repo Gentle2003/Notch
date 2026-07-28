@@ -27,7 +27,10 @@ export function Header() {
         </nav>
       </div>
       <ConnectButton
-        chainStatus="icon"
+        // No standing chain pill — the network lives behind the account button
+        // instead of taking up header space. RainbowKit still swaps in a
+        // "Wrong network" button on its own if the wallet is on an unsupported chain.
+        chainStatus="none"
         accountStatus={{ smallScreen: "avatar", largeScreen: "full" }}
         showBalance={false}
       />

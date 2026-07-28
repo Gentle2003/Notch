@@ -132,7 +132,7 @@ function EmptyHint() {
     <div className="card p-8 text-center text-muted">
       <p className="mb-1">No datanets found on this network.</p>
       <p className="text-sm">
-        Connect to Robinhood Chain (or run a local Anvil deploy) to see live markets.
+        Switch your wallet to Robinhood Chain testnet to see live markets.
       </p>
     </div>
   );
