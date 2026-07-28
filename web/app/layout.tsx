@@ -16,15 +16,24 @@ const serif = Fraunces({
   variable: "--font-serif",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.notchmarket.xyz";
+
 export const metadata: Metadata = {
+  // Without this, the relative OG/Twitter image paths below can't be resolved
+  // into the absolute URLs that social crawlers require.
+  metadataBase: new URL(SITE_URL),
   title: "Notch — stake on the signal",
   description:
     "A research-quality staking market on Robinhood Chain. Researchers stake on their analysis; expert reviewers stake to grade it; the best earn reputation.",
+  alternates: { canonical: "/" },
   icons: {
     icon: "/notch-logo.jpg",
     apple: "/notch-logo.jpg",
   },
   openGraph: {
+    type: "website",
+    siteName: "Notch",
+    url: SITE_URL,
     title: "Notch — stake on the signal",
     description:
       "A research-quality staking market on Robinhood Chain. Stake on the signal, not the noise.",

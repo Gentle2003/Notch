@@ -16,9 +16,9 @@ import { robinhoodTestnet, robinhoodMainnet, anvil } from "./chains";
 const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_ID ?? "d7706add626b3a56770b7f4cad87fe0f";
 
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "https://notch-web-gentlespreedev-4936s-projects.vercel.app";
+// Canonical origin. The apex redirects to www, so www is the real home — this is
+// what wallets display as the requesting site on the approval screen.
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.notchmarket.xyz";
 
 // Curated wallet list — deliberately excludes the Coinbase/Base connector, which
 // pulls in @coinbase/cdp-sdk + optional @x402/* packages that break the build.
