@@ -38,7 +38,13 @@ anvil --fork-url https://rpc.mainnet.chain.robinhood.com &
 RPC=http://127.0.0.1:8545 ./scripts/launch-mainnet.sh 0xYourTokenAddress
 ```
 
-Same code path, real mainnet state, no consequences.
+Any RPC that is not real mainnet puts the script in rehearsal mode: it deploys and
+verifies exactly as normal against the fork, then restores every file it touched and
+exits without committing or pushing. Real mainnet is never contacted and the
+deployer's real balance and nonce are untouched — the fork has its own copy of both.
+
+Verified rather than assumed: a full rehearsal leaves HEAD and the working tree
+byte-identical, and the live market's artifact count unchanged.
 
 **4. Check the token is usable as collateral.** The script verifies it is an ERC-20
 with non-zero supply, but it cannot detect a transfer fee, and that is the one

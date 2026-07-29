@@ -12,7 +12,15 @@
 set -euo pipefail
 
 TOKEN="${1:-}"
-RPC="${RPC:-https://rpc.mainnet.chain.robinhood.com}"
+MAINNET_RPC="https://rpc.mainnet.chain.robinhood.com"
+RPC="${RPC:-$MAINNET_RPC}"
+
+# Anything not pointed at real mainnet is a rehearsal: deploy and verify exactly as
+# normal, but never commit, never push, and put every touched file back. Without
+# this a fork run would publish addresses that exist only on a local chain, and
+# Vercel would happily deploy the live site against them.
+REHEARSAL=0
+[[ "$RPC" != "$MAINNET_RPC" ]] && REHEARSAL=1
 CHAIN_ID=4663
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT/contracts"
@@ -28,6 +36,28 @@ DEPLOYER=$(cast wallet address --private-key "$PRIVATE_KEY")
 
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 fail() { printf '\033[31mABORT: %s\033[0m\n' "$1" >&2; exit 1; }
+
+if [[ "$REHEARSAL" == "1" ]]; then
+  printf '\n\033[33m REHEARSAL — %s\033[0m\n' "$RPC"
+  printf '\033[33m Nothing will be committed or pushed; local files are restored at the end.\033[0m\n'
+fi
+
+# Snapshot anything the script rewrites, so a rehearsal leaves no trace.
+RESTORE=(contracts/deployments/4663.json web/lib/contracts.ts)
+if [[ "$REHEARSAL" == "1" ]]; then
+  TMPDIR_SNAP=$(mktemp -d)
+  for f in "${RESTORE[@]}"; do
+    [[ -f "$ROOT/$f" ]] && cp "$ROOT/$f" "$TMPDIR_SNAP/$(echo "$f" | tr / _)"
+  done
+  restore() {
+    for f in "${RESTORE[@]}"; do
+      snap="$TMPDIR_SNAP/$(echo "$f" | tr / _)"
+      [[ -f "$snap" ]] && cp "$snap" "$ROOT/$f"
+    done
+    rm -rf "$TMPDIR_SNAP"
+  }
+  trap restore EXIT
+fi
 
 say "1/5  Pre-flight"
 
@@ -75,7 +105,12 @@ echo "  datanets            $DN"
 echo "  collateral bound    $BOUND"
 echo "  market authorised   $AUTHED"
 [[ "$DN" == "5" ]] || fail "expected 5 datanets, got $DN"
-[[ "${BOUND,,}" == "${TOKEN,,}" ]] || fail "collateral mismatch: bound to $BOUND"
+# Lowercase via tr, not ${var,,} — that is bash 4 syntax and macOS ships bash 3.2,
+# where it aborts the script. This is the check that confirms the market bound to
+# the token you asked for, so it silently not running is the worst possible failure.
+BOUND_LC=$(printf '%s' "$BOUND" | tr '[:upper:]' '[:lower:]')
+TOKEN_LC=$(printf '%s' "$TOKEN" | tr '[:upper:]' '[:lower:]')
+[[ "$BOUND_LC" == "$TOKEN_LC" ]] || fail "collateral mismatch: bound to $BOUND, expected $TOKEN"
 [[ "$AUTHED" == "true" ]] || fail "market not authorised to mint Reps"
 
 say "5/5  Pointing the web app at mainnet"
@@ -96,6 +131,15 @@ console.log("  web/lib/contracts.ts updated");
 NODE
 
 cd "$ROOT"
+if [[ "$REHEARSAL" == "1" ]]; then
+  say "Rehearsal complete — nothing committed, local files restored."
+  echo "  NotchMarket  $MARKET  (exists only on $RPC)"
+  echo "  Reputation   $REPUTATION"
+  echo
+  echo "  Re-run without RPC= to deploy for real."
+  exit 0
+fi
+
 git add -A
 git -c user.name="Notch" -c user.email="gentlespreemain@gmail.com" \
   commit -q -m "chore: launch on Robinhood mainnet against $SYMBOL
