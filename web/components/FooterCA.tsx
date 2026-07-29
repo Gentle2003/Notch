@@ -19,7 +19,7 @@ export function FooterCA() {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <CopyAddress address={deployment.NotchToken} />
       <span className="text-[11px] text-faint">
-        {chainId === 4663 ? "Robinhood Chain mainnet" : `chain ${chainId}`}
+        {chainId === 4663 ? "Robinhood Chain" : `chain ${chainId}`}
       </span>
     </div>
   );
