@@ -73,6 +73,12 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         uint256 yesAmount;
         uint256 noAmount;
         bool claimed;
+        // Sum of (amount * consensus-at-entry, in bps) per side. Divided by the staked
+        // amount this gives a stake-weighted average of how decided the market already
+        // looked when this reviewer committed — which is what separates conviction from
+        // joining a queue.
+        uint256 entryYesWeighted;
+        uint256 entryNoWeighted;
     }
 
     // --- Storage ---
@@ -92,9 +98,12 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     ///         Widened on a published schedule as real reputation accumulates.
     uint256 public repMultCapBps = 15_000;
 
-    /// @notice Reps minted per sqrt(whole token) of winning stake, before the contest
-    ///         factor. Tunable by owner.
-    uint256 public repRate = 1;
+    /// @notice Scales the Rep award. Reps = repRate * sqrt(stake) * contest * movement,
+    ///         and with three sub-1.0 factors multiplied a rate of 1 rounds ordinary
+    ///         participation to zero. At 5, a solid call (1,000 staked, 0.8 contest,
+    ///         0.3 movement) earns ~37, so the 4x cap is roughly 68 sustained good calls.
+    ///         Tunable by owner once real distributions are observable.
+    uint256 public repRate = 5;
 
     /// @notice How long a provisional outcome can be challenged before it finalises.
     uint64 public constant CHALLENGE_WINDOW = 48 hours;
@@ -204,6 +213,24 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         return (2 * BPS * lo) / total;
     }
 
+    /// @notice Share of effective weight already sitting on `support`, in bps, before the
+    ///         caller's own stake lands. 50% when nothing has been staked yet — an
+    ///         untouched market is maximally undecided.
+    function _entryConsensusBps(Artifact storage a, bool support) internal view returns (uint256) {
+        uint256 total = a.effectiveYes + a.effectiveNo;
+        if (total == 0) return BPS / 2;
+        uint256 side = support ? a.effectiveYes : a.effectiveNo;
+        return (side * BPS) / total;
+    }
+
+    /// @notice Where consensus finished, from the winning side's point of view.
+    function _finalConsensusBps(Artifact storage a) internal view returns (uint256) {
+        uint256 total = a.effectiveYes + a.effectiveNo;
+        if (total == 0) return BPS / 2;
+        uint256 win = a.outcomeYes ? a.effectiveYes : a.effectiveNo;
+        return (win * BPS) / total;
+    }
+
     // --- Core flow ---
 
     /// @notice Submit a research artifact and stake on its quality.
@@ -273,16 +300,20 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         // Snapshot reputation now, so Reps earned elsewhere mid-window cannot
         // retroactively strengthen a position already taken.
         uint256 weighted = (amount * repMultiplierBps(reputation.repOf(msg.sender))) / BPS;
+        // Read the market before this stake moves it.
+        uint256 entryBps = _entryConsensusBps(a, support);
 
         Review storage r = reviews[artifactId][msg.sender];
         if (support) {
             a.yesStake += amount;
             a.effectiveYes += weighted;
             r.yesAmount += amount;
+            r.entryYesWeighted += amount * entryBps;
         } else {
             a.noStake += amount;
             a.effectiveNo += weighted;
             r.noAmount += amount;
+            r.entryNoWeighted += amount * entryBps;
         }
 
         collateral.safeTransferFrom(msg.sender, address(this), amount);
@@ -344,15 +375,18 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         bool backsYes = !a.outcomeYes; // you only challenge what you disagree with
 
         uint256 weighted = (bond * repMultiplierBps(reputation.repOf(msg.sender))) / BPS;
+        uint256 entryBps = _entryConsensusBps(a, backsYes);
         Review storage r = reviews[artifactId][msg.sender];
         if (backsYes) {
             a.yesStake += bond;
             a.effectiveYes += weighted;
             r.yesAmount += bond;
+            r.entryYesWeighted += bond * entryBps;
         } else {
             a.noStake += bond;
             a.effectiveNo += weighted;
             r.noAmount += bond;
+            r.entryNoWeighted += bond * entryBps;
         }
 
         a.round += 1;
@@ -388,18 +422,25 @@ contract NotchMarket is Ownable, ReentrancyGuard {
             ? (a.submitStake + a.yesStake, a.noStake)
             : (a.noStake, a.yesStake + a.submitStake);
 
-        // Weight this caller contributes to the winning side (0 if they lost).
+        // Weight this caller contributes to the winning side (0 if they lost), plus
+        // sum(stake * entry-consensus) so we can recover where they came in.
         uint256 myWeight;
+        uint256 entryAcc;
 
         if (msg.sender == a.submitter && !a.submitterClaimed) {
             a.submitterClaimed = true;
-            if (a.outcomeYes) myWeight += a.submitStake; // else: slashed, closes their record
+            if (a.outcomeYes) {
+                myWeight += a.submitStake; // else: slashed, closes their record
+                // The author committed before any review existed — maximally undecided.
+                entryAcc += a.submitStake * (BPS / 2);
+            }
         }
 
         Review storage r = reviews[artifactId][msg.sender];
         if (!r.claimed && (r.yesAmount > 0 || r.noAmount > 0)) {
             r.claimed = true;
             myWeight += a.outcomeYes ? r.yesAmount : r.noAmount;
+            entryAcc += a.outcomeYes ? r.entryYesWeighted : r.entryNoWeighted;
         }
 
         if (myWeight > 0) {
@@ -417,12 +458,27 @@ contract NotchMarket is Ownable, ReentrancyGuard {
 
             payout = myWeight + share;
 
-            // Reps scale with sqrt(stake), not stake, so 100x the capital earns 10x the
-            // reputation rather than 100x. Multiplied by how contested the artifact was,
-            // which is zero when one side went unopposed.
+            // Reps = sqrt(stake) * contest * movement.
+            //
+            //   sqrt(stake)  100x the capital earns 10x the reputation, not 100x.
+            //   contest      zero when a side went unopposed, so nothing is minted from
+            //                a market nobody argued with.
+            //   movement     how far consensus travelled toward you *after* you staked.
+            //
+            // Movement is what separates conviction from conformity. Backing a side at
+            // 20% and watching it close at 70% is a call. Joining at 90% is a queue.
+            // Both are "on the winning side"; only one is evidence of judgment. Without
+            // this the cheapest way to farm reputation is to wait until a market is
+            // nearly settled and pile onto the leader.
             uint256 cf = contestFactorBps(a.effectiveYes, a.effectiveNo);
             if (cf > 0) {
-                reps = (repRate * Math.sqrt(myWeight / 1 ether) * cf) / BPS;
+                uint256 avgEntryBps = entryAcc / myWeight;
+                uint256 finalBps = _finalConsensusBps(a);
+                uint256 movementBps = finalBps > avgEntryBps ? finalBps - avgEntryBps : 0;
+                if (movementBps > 0) {
+                    reps =
+                        (repRate * Math.sqrt(myWeight / 1 ether) * cf * movementBps) / (BPS * BPS);
+                }
             }
         }
 

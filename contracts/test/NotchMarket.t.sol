@@ -109,12 +109,14 @@ contract NotchMarketTest is Test {
         vm.expectRevert(bytes("nothing to claim"));
         market.claim(id);
 
-        // Reps now scale with sqrt(stake) and the contest factor, not raw stake.
-        // yes=20 no=12 -> contest = 2*12/32 = 0.75
-        //   alice:      sqrt(20) = 4 -> 4 * 0.75 = 3
-        //   researcher: sqrt(10) = 3 -> 3 * 0.75 = 2 (integer division)
-        assertEq(rep.repOf(alice), 3);
-        assertEq(rep.repOf(researcher), 2);
+        // reps = repRate(5) * sqrt(stake) * contest * movement.
+        // Both entered while the market was undecided (50%); it closed at 20/32 = 62.5%,
+        // so movement = 0.125 for each. contest = 2*12/32 = 0.75.
+        //   alice:      5 * sqrt(20)=4 * 0.75 * 0.125 = 1.87 -> 1
+        //   researcher: 5 * sqrt(10)=3 * 0.75 * 0.125 = 1.40 -> 1
+        // Small stakes and a small swing earn little, which is the intent.
+        assertEq(rep.repOf(alice), 1);
+        assertEq(rep.repOf(researcher), 1);
         assertEq(rep.repOf(bob), 0);
 
         // contract fully drained (no dust locked): 10+20+12 = 42 in, 28+14 = 42 out
@@ -152,8 +154,10 @@ contract NotchMarketTest is Test {
         vm.expectRevert(bytes("nothing to claim"));
         market.claim(id);
 
-        // yes=5 no=30 -> contest = 2*5/35 = 0.2857; sqrt(30) = 5 -> 5 * 0.2857 = 1
-        assertEq(rep.repOf(alice), 1);
+        // alice staked NO into an empty market (entry 50%) and it closed at 30/35 = 85.7%,
+        // so movement = 0.357 — consensus travelled a long way toward her.
+        // 5 * sqrt(30)=5 * contest 0.2857 * 0.357 = 2.55 -> 2
+        assertEq(rep.repOf(alice), 2);
         assertEq(token.balanceOf(address(market)), 0);
     }
 

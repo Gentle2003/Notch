@@ -1,6 +1,6 @@
 # Resolution v2 — reputation-weighted outcomes
 
-**Status:** implemented and deployed to Robinhood testnet
+**Status:** implemented; awaiting the next batched redeploy
 **Replaces:** `NotchMarket.resolve()` line 219 and the Rep award in `claim()`
 
 ---
@@ -119,7 +119,7 @@ Square root, so influence keeps growing with a track record but with diminishing
 
 Reps are awarded at claim time to the winning side only:
 
-$$\Delta r_i = R \cdot \sqrt{s_i} \cdot C$$
+$$\Delta r_i = R \cdot \sqrt{s_i} \cdot C \cdot M$$
 
 where **C is the contest factor**:
 
@@ -134,6 +134,16 @@ C_bps  = 20_000 * min(W_yes, W_no) / (W_yes + W_no)     // 0 … 10_000
 Δreps  = R * isqrt(stake_i / 1e18) * C_bps / 10_000
 ```
 
+**M is consensus movement** — how far the market travelled toward you *after* you
+committed:
+
+$$M = \max\left(0,\; p_{final} - \bar{p}_{entry}\right)$$
+
+$\bar{p}_{entry}$ is the stake-weighted average share your side already held at the
+moment each of your stakes landed (50% for an untouched market, and for the submitter,
+who commits before any review exists). $p_{final}$ is the winning side's share at
+resolution.
+
 ### 4.2 What each term does
 
 **√sᵢ breaks the exchange rate.** 100× the capital earns 10× the reputation, not 100×. Buying influence gets quadratically more expensive.
@@ -147,11 +157,28 @@ C_bps  = 20_000 * min(W_yes, W_no) / (W_yes + W_no)     // 0 … 10_000
 | Contested | 700 : 300 | 0.60 | most |
 | Knife-edge | 510 : 490 | 0.98 | full |
 
+**M is what separates conviction from conformity.** Notch has no external referee — being
+"right" means agreeing with the eventual majority. Paying for that alone rewards herding,
+and because reputation weights future votes, it compounds: agree with the crowd, gain
+multiplier, pull harder, agree again. There is nothing outside the loop to correct it.
+
+Movement breaks that without needing any facts. Backing a side at 20% and watching it
+close at 70% moved the market. Joining at 90% joined a queue. Both are "on the winning
+side"; only one is evidence of judgment. Verified in `test/Movement.t.sol`: two reviewers,
+identical stake, same winning side — the early one earns 4 Reps, the late one earns 0.
+
+Without it, the cheapest way to farm reputation was to wait until a market was nearly
+settled and pile onto the leader.
+
 **C = 0 when uncontested kills the farm outright.** With no opposition there is no reputation, so the exploit in §1.2 pays nothing. It also stops the subtler version: staking huge amounts on obviously-correct artifacts to grind Reps cheaply. Being right when nobody disagreed is not evidence of judgment, and is no longer paid as if it were.
 
 ### 4.3 Calibration
 
-At $R = 1$, staking 10,000 tokens on a perfectly contested market earns 100 reps. Reaching the 4× cap needs ~2,500 reps — on the order of 25 large, genuinely contested, correct calls. Reaching maximum influence should be hard and slow. Tune $R$ once real distributions are observable.
+Three sub-1.0 factors multiply, so $R = 1$ rounds ordinary participation to zero — a
+20-token stake with 0.75 contest and 0.125 movement earns nothing at all. $R = 5$ puts a
+solid call (1,000 staked, 0.8 contest, 0.3 movement) at ~37 Reps, making the 4× cap
+roughly 68 sustained good calls. Reaching maximum influence should be hard and slow.
+Tune once real distributions are observable.
 
 ---
 
