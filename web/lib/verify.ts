@@ -19,6 +19,52 @@ export type Integrity =
 export const ZERO_HASH =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+export type SnapshotResult =
+  | { ok: true; hash: `0x${string}` }
+  | { ok: false; reason: "not-http" | "unreachable" | "http-error" | "unstable"; detail?: string };
+
+/**
+ * Fetch a source twice and hash both. A hash is only committed if the two agree.
+ *
+ * Most of the web is not hashable. Pages like x.com embed per-request tokens and
+ * timestamps, so the same unedited page hashes differently on every fetch —
+ * measured at three fetches, three hashes, with the byte count wobbling by one.
+ * Committing one of those would mean every reviewer sees "content changed"
+ * forever, which trains people to ignore the warning that is supposed to matter.
+ *
+ * Refusing to hash an unstable source is more honest than hashing it badly.
+ */
+export async function snapshot(uri: string): Promise<SnapshotResult> {
+  if (!/^https?:\/\//.test(uri)) return { ok: false, reason: "not-http" };
+
+  const fetchText = async () => {
+    const res = await fetch(uri, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  };
+
+  let first: string;
+  try {
+    first = await fetchText();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return msg.startsWith("HTTP")
+      ? { ok: false, reason: "http-error", detail: msg }
+      : { ok: false, reason: "unreachable" };
+  }
+
+  try {
+    const second = await fetchText();
+    if (hashContent(first) !== hashContent(second)) {
+      return { ok: false, reason: "unstable" };
+    }
+  } catch {
+    return { ok: false, reason: "unstable" };
+  }
+
+  return { ok: true, hash: hashContent(first) };
+}
+
 /** Hash raw text the same way the submit form does, so the two always agree. */
 export function hashContent(text: string): `0x${string}` {
   return keccak256(toBytes(text));

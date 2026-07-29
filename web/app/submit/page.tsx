@@ -9,7 +9,7 @@ import { useApproveAndWrite } from "@/lib/useApproveAndWrite";
 import { notchMarketAbi } from "@/lib/abis";
 import { Faucet } from "@/components/Faucet";
 import { fmtToken } from "@/lib/format";
-import { hashContent, ZERO_HASH } from "@/lib/verify";
+import { snapshot as snapshotSource, ZERO_HASH } from "@/lib/verify";
 
 function SubmitForm() {
   const { address } = useAccount();
@@ -24,7 +24,10 @@ function SubmitForm() {
   const [uri, setUri] = useState("");
   const [stake, setStake] = useState("25");
   const [contentHash, setContentHash] = useState<string>(ZERO_HASH);
-  const [hashState, setHashState] = useState<"idle" | "hashing" | "ok" | "failed">("idle");
+  const [hashState, setHashState] = useState<
+    "idle" | "hashing" | "ok" | "unreachable" | "http-error" | "unstable"
+  >("idle");
+  const [hashDetail, setHashDetail] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   const selected = datanets.find((d) => d.id === datanetId);
@@ -36,20 +39,20 @@ function SubmitForm() {
   // blocked (CORS is common on X/Twitter), we submit without a commitment
   // rather than failing — but the UI says so plainly.
   const snapshot = async () => {
-    if (!uri || !/^https?:\/\//.test(uri)) {
+    if (!uri) {
       setContentHash(ZERO_HASH);
       setHashState("idle");
       return;
     }
     setHashState("hashing");
-    try {
-      const res = await fetch(uri);
-      if (!res.ok) throw new Error(String(res.status));
-      setContentHash(hashContent(await res.text()));
+    const res = await snapshotSource(uri);
+    if (res.ok) {
+      setContentHash(res.hash);
       setHashState("ok");
-    } catch {
+    } else {
       setContentHash(ZERO_HASH);
-      setHashState("failed");
+      setHashState(res.reason === "not-http" ? "idle" : res.reason);
+      setHashDetail(res.detail ?? "");
     }
   };
 
@@ -136,18 +139,32 @@ function SubmitForm() {
             onBlur={snapshot}
           />
           {hashState === "hashing" && (
-            <p className="text-[11px] text-muted mt-1.5">Snapshotting content…</p>
+            <p className="text-[11px] text-muted mt-1.5">Checking the source…</p>
           )}
           {hashState === "ok" && (
             <p className="text-[11px] text-orange mt-1.5">
-              ✓ Content hashed. Reviewers will be warned if the source changes after you submit.
+              ✓ Content hashed and stable. Reviewers will be warned if it changes.
             </p>
           )}
-          {hashState === "failed" && (
+          {hashState === "http-error" && (
+            <p className="text-[11px] text-no mt-1.5">
+              The source returned {hashDetail}. Check the link — a 404 usually means the
+              post is deleted, private, or the URL is wrong.
+            </p>
+          )}
+          {hashState === "unreachable" && (
             <p className="text-[11px] text-muted mt-1.5">
-              Couldn&apos;t read that URL from the browser (CORS or unreachable), so no hash
-              will be committed. Reviewers won&apos;t be able to detect later edits — consider
-              an archive link or IPFS.
+              Couldn&apos;t reach that URL from the browser. No hash will be committed, so
+              reviewers won&apos;t be able to detect later edits.
+            </p>
+          )}
+          {hashState === "unstable" && (
+            <p className="text-[11px] text-muted mt-1.5">
+              <span className="text-cream">This source can&apos;t be hashed.</span> It returns
+              different bytes on every request — X and most social sites embed per-request
+              tokens — so a hash would report &quot;content changed&quot; forever even if you
+              never touch it. Submitting without one. For tamper-detection, link an archive
+              snapshot or IPFS instead.
             </p>
           )}
         </div>
