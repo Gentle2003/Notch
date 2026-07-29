@@ -48,8 +48,8 @@ export default function LeaderboardPage() {
         <h1 className="text-2xl font-bold">Reputation leaderboard</h1>
         <p className="text-muted mt-1.5 max-w-2xl text-sm">
           Reps are non-transferable — earned only by staking correctly on research quality.
-          They gate access to higher-trust datanets. (Shows analysts who&apos;ve submitted;
-          reviewer-only Reps accrue on-chain too.)
+          They gate access to higher-trust datanets. The Notch Leaderboard shows analysts who&apos;ve submitted;
+          reviewer-only Reps accrue on-chain too.
         </p>
       </div>
 
