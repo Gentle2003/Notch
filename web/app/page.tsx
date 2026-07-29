@@ -19,7 +19,7 @@ export default function Home() {
       <section className="pt-10 pb-6 grid lg:grid-cols-[1fr_auto] gap-10 items-center">
         <div>
           <div className="eyebrow mb-6">
-            <span className="text-orange">●</span> Live on Robinhood Chain — RWA × Meme research
+            <span className="text-orange">●</span> Live on Robinhood Chain — RWA × Meme Research Market
           </div>
           <h1 className="display text-5xl sm:text-6xl leading-[1.02]">
             Stake on the <span className="em-serif">signal</span>,
@@ -28,7 +28,7 @@ export default function Home() {
           <p className="text-muted mt-6 max-w-xl leading-relaxed">
             Notch is a research-quality market. Analysts stake on their RWA &amp; meme theses;
             expert reviewers stake to grade them. The crowd&apos;s capital prices the
-            truth — and the sharpest analysts earn on-chain reputation.
+            truth and the sharpest analysts earn on-chain reputation.
           </p>
           <div className="flex gap-3 mt-8">
             <Link href="/submit" className="btn-primary">
