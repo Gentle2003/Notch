@@ -5,6 +5,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import {NotchToken} from "../src/NotchToken.sol";
 import {Reputation} from "../src/Reputation.sol";
 import {NotchMarket} from "../src/NotchMarket.sol";
+import {TestnetFaucet} from "../src/TestnetFaucet.sol";
 
 /// @notice Deploys the Notch stack, wires reputation permissions, and seeds starter datanets.
 ///         Writes deployed addresses to deployments/<chainId>.json for the web app to consume.
@@ -22,6 +23,11 @@ contract Deploy is Script {
         Reputation rep = new Reputation(deployer);
         NotchMarket market = new NotchMarket(address(token), address(rep), deployer);
         rep.setMarket(address(market), true);
+
+        // Testnet convenience only — the token itself can no longer mint. Do not deploy
+        // this to mainnet; the market works fine without it.
+        TestnetFaucet faucet = new TestnetFaucet(address(token), deployer);
+        token.transfer(address(faucet), 100_000 ether);
 
         // Starter datanets tuned for the RWA / meme research narrative.
         // (name, description, minSubmitStake, reviewWindow, minReviewerRep)
@@ -66,15 +72,19 @@ contract Deploy is Script {
         console2.log("NotchToken:", address(token));
         console2.log("Reputation:", address(rep));
         console2.log("NotchMarket:", address(market));
+        console2.log("TestnetFaucet:", address(faucet));
         console2.log("deployer:", deployer);
 
-        _write(address(token), address(rep), address(market), deployer);
+        _write(address(token), address(rep), address(market), address(faucet), deployer);
     }
 
-    function _write(address token, address rep, address market, address deployer) internal {
+    function _write(address token, address rep, address market, address faucet, address deployer)
+        internal
+    {
         string memory obj = "deployment";
         vm.serializeAddress(obj, "NotchToken", token);
         vm.serializeAddress(obj, "Reputation", rep);
+        vm.serializeAddress(obj, "TestnetFaucet", faucet);
         vm.serializeAddress(obj, "deployer", deployer);
         string memory json = vm.serializeAddress(obj, "NotchMarket", market);
         string memory path =

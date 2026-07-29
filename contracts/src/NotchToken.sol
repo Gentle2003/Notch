@@ -4,25 +4,17 @@ pragma solidity 0.8.28;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @title NotchToken
-/// @notice Testnet collateral token staked by researchers and reviewers in Notch quality
-///         markets. Ships with a rate-limited public faucet so testers can self-serve stake.
-///         On a production deployment this would be replaced by a real collateral asset
-///         (e.g. bridged USDG / Robinhood ETH) and the faucet removed.
+/// @notice Collateral staked by researchers and reviewers in Notch quality markets.
+///
+///         Fixed supply, minted once at deployment. There is no mint function and no
+///         faucet: an earlier version let any address mint itself 1,000 tokens a day,
+///         which is harmless on a testnet and unbounded inflation anywhere else.
+///         Testnet distribution is handled by `TestnetFaucet`, which hands out tokens it
+///         already holds and is simply not deployed to mainnet.
 contract NotchToken is ERC20 {
-    uint256 public constant FAUCET_AMOUNT = 1_000 ether;
-    uint256 public constant FAUCET_COOLDOWN = 1 days;
-
-    mapping(address => uint256) public lastFaucet;
+    uint256 public constant INITIAL_SUPPLY = 1_000_000 ether;
 
     constructor() ERC20("Notch Stake", "NOTCH") {
-        // Seed the deployer for scripted setup / house liquidity.
-        _mint(msg.sender, 1_000_000 ether);
-    }
-
-    /// @notice Mint testnet stake to the caller, once per cooldown window.
-    function faucet() external {
-        require(block.timestamp >= lastFaucet[msg.sender] + FAUCET_COOLDOWN, "faucet: cooldown");
-        lastFaucet[msg.sender] = block.timestamp;
-        _mint(msg.sender, FAUCET_AMOUNT);
+        _mint(msg.sender, INITIAL_SUPPLY);
     }
 }

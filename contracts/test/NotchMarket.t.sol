@@ -50,16 +50,6 @@ contract NotchMarketTest is Test {
         id = market.submitArtifact(datanetId, "GOLD RWA thesis", "ipfs://cid", CONTENT_HASH, stake);
     }
 
-    function test_faucet() public {
-        vm.prank(alice);
-        token.faucet();
-        assertEq(token.balanceOf(alice), 10_000 ether + 1_000 ether);
-        // cooldown enforced
-        vm.prank(alice);
-        vm.expectRevert(bytes("faucet: cooldown"));
-        token.faucet();
-    }
-
     function test_submitStakeTooLow() public {
         vm.prank(researcher);
         vm.expectRevert(bytes("stake too low"));
