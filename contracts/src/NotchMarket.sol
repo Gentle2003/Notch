@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -87,6 +88,13 @@ contract NotchMarket is Ownable, ReentrancyGuard, Pausable {
     IERC20 public immutable collateral;
     Reputation public immutable reputation;
 
+    /// @notice One whole unit of the collateral, i.e. 10**decimals. Read at deployment
+    ///         rather than assumed, because the Rep award divides stake down to whole
+    ///         tokens before taking a square root. Hard-coding 1e18 silently zeroed the
+    ///         entire reputation system for any token with fewer decimals — a million
+    ///         USDC would have earned nothing, with no revert to notice.
+    uint256 public immutable collateralUnit;
+
     uint256 internal constant BPS = 10_000;
 
     /// @notice A zero-rep reviewer still counts at face value — diluted, never silenced.
@@ -114,7 +122,7 @@ contract NotchMarket is Ownable, ReentrancyGuard, Pausable {
     uint8 public constant MAX_ROUNDS = 3;
 
     /// @notice Floor on a challenge bond, so a near-tie cannot be appealed for dust.
-    uint256 public minChallengeBond = 10 ether;
+    uint256 public minChallengeBond; // set in the constructor, scaled to the collateral
 
     /// @notice Delay on parameter changes that affect live markets. pause() is
     ///         deliberately exempt — an emergency stop that takes two days is not one.
@@ -162,6 +170,18 @@ contract NotchMarket is Ownable, ReentrancyGuard, Pausable {
     constructor(address collateral_, address reputation_, address owner_) Ownable(owner_) {
         collateral = IERC20(collateral_);
         reputation = Reputation(reputation_);
+
+        // decimals() is optional in the ERC-20 standard; fall back to 18 if absent.
+        uint8 dec = 18;
+        try IERC20Metadata(collateral_).decimals() returns (uint8 d) {
+            dec = d;
+        } catch {}
+        require(dec <= 36, "collateral decimals too large");
+        collateralUnit = 10 ** dec;
+
+        // Denominate the appeal floor in whole tokens rather than wei, so the default
+        // means the same thing whatever the collateral is.
+        minChallengeBond = 10 * collateralUnit;
     }
 
     // --- Admin ---
@@ -521,7 +541,7 @@ contract NotchMarket is Ownable, ReentrancyGuard, Pausable {
                 uint256 movementBps = finalBps > avgEntryBps ? finalBps - avgEntryBps : 0;
                 if (movementBps > 0) {
                     reps =
-                        (repRate * Math.sqrt(myWeight / 1 ether) * cf * movementBps) / (BPS * BPS);
+                        (repRate * Math.sqrt(myWeight / collateralUnit) * cf * movementBps) / (BPS * BPS);
                 }
             }
         }
