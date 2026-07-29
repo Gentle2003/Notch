@@ -101,9 +101,12 @@ contract NotchMarketTest is Test {
         vm.expectRevert(bytes("nothing to claim"));
         market.claim(id);
 
-        // reps: alice earned 20, researcher earned 10 (repPerToken=1)
-        assertEq(rep.repOf(alice), 20);
-        assertEq(rep.repOf(researcher), 10);
+        // Reps now scale with sqrt(stake) and the contest factor, not raw stake.
+        // yes=20 no=12 -> contest = 2*12/32 = 0.75
+        //   alice:      sqrt(20) = 4 -> 4 * 0.75 = 3
+        //   researcher: sqrt(10) = 3 -> 3 * 0.75 = 2 (integer division)
+        assertEq(rep.repOf(alice), 3);
+        assertEq(rep.repOf(researcher), 2);
         assertEq(rep.repOf(bob), 0);
 
         // contract fully drained (no dust locked): 10+20+12 = 42 in, 28+14 = 42 out
@@ -140,7 +143,8 @@ contract NotchMarketTest is Test {
         vm.expectRevert(bytes("nothing to claim"));
         market.claim(id);
 
-        assertEq(rep.repOf(alice), 30);
+        // yes=5 no=30 -> contest = 2*5/35 = 0.2857; sqrt(30) = 5 -> 5 * 0.2857 = 1
+        assertEq(rep.repOf(alice), 1);
         assertEq(token.balanceOf(address(market)), 0);
     }
 

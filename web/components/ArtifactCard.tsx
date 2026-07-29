@@ -31,7 +31,12 @@ export function ArtifactCard({ a, datanetName }: { a: Artifact; datanetName?: st
         {a.title}
       </h3>
 
-      <ConsensusBar yesStake={a.yesStake} noStake={a.noStake} />
+      <ConsensusBar
+        yesStake={a.yesStake}
+        noStake={a.noStake}
+        effectiveYes={a.effectiveYes}
+        effectiveNo={a.effectiveNo}
+      />
 
       <div className="flex justify-between text-[11px] text-muted mt-3 pt-3 border-t border-border">
         <span>by {shortAddr(a.submitter)}</span>

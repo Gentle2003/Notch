@@ -41,6 +41,8 @@ export type Artifact = {
   reviewDeadline: bigint;
   yesStake: bigint;
   noStake: bigint;
+  effectiveYes: bigint; // reputation-weighted, decides the outcome
+  effectiveNo: bigint;
   status: number; // 0 Reviewing, 1 Resolved
   outcomeYes: boolean;
   submitterClaimed: boolean;

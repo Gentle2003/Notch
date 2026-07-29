@@ -77,7 +77,12 @@ export function ArtifactView({ id }: { id: number }) {
 
         <div className="card p-5">
           <h2 className="text-sm font-semibold text-muted mb-4">Market consensus</h2>
-          <ConsensusBar yesStake={a.yesStake} noStake={a.noStake} />
+          <ConsensusBar
+        yesStake={a.yesStake}
+        noStake={a.noStake}
+        effectiveYes={a.effectiveYes}
+        effectiveNo={a.effectiveNo}
+      />
           <div className="grid grid-cols-3 gap-4 mt-5 text-center">
             <Stat label="Submitter stake" value={`${fmtToken(a.submitStake)}`} />
             <Stat label="YES pool" value={`${fmtToken(a.yesStake)}`} accent="orange" />

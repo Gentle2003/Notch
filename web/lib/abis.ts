@@ -23,6 +23,32 @@ export const notchMarketAbi = [
   },
   {
     "type": "function",
+    "name": "REP_MULT_BASE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REP_MULT_K",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "artifactCount",
     "inputs": [],
     "outputs": [
@@ -114,6 +140,16 @@ export const notchMarketAbi = [
         "name": "distributedLosePool",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "effectiveYes",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "effectiveNo",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -162,6 +198,30 @@ export const notchMarketAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "contestFactorBps",
+    "inputs": [
+      {
+        "name": "wYes",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "wNo",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -344,6 +404,16 @@ export const notchMarketAbi = [
             "name": "distributedLosePool",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "effectiveYes",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "effectiveNo",
+            "type": "uint256",
+            "internalType": "uint256"
           }
         ]
       }
@@ -413,7 +483,39 @@ export const notchMarketAbi = [
   },
   {
     "type": "function",
-    "name": "repPerToken",
+    "name": "repMultCapBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "repMultiplierBps",
+    "inputs": [
+      {
+        "name": "reps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "repRate",
     "inputs": [],
     "outputs": [
       {
@@ -509,7 +611,20 @@ export const notchMarketAbi = [
   },
   {
     "type": "function",
-    "name": "setRepPerToken",
+    "name": "setRepMultCapBps",
+    "inputs": [
+      {
+        "name": "v",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRepRate",
     "inputs": [
       {
         "name": "v",
@@ -1192,6 +1307,19 @@ export const reputationAbi = [
   },
   {
     "type": "function",
+    "name": "HALF_LIFE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "award",
     "inputs": [
       {
@@ -1229,6 +1357,44 @@ export const reputationAbi = [
   },
   {
     "type": "function",
+    "name": "lastAwardAt",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lifetimeRep",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -1252,7 +1418,7 @@ export const reputationAbi = [
     "name": "repOf",
     "inputs": [
       {
-        "name": "",
+        "name": "account",
         "type": "address",
         "internalType": "address"
       }
@@ -1365,7 +1531,7 @@ export const reputationAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "newBalance",
+        "name": "newLifetime",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

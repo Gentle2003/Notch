@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Reputation} from "./Reputation.sol";
 
 /// @title NotchMarket
@@ -57,6 +58,10 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         // field order (and the getArtifact tuple) stays stable for readers.
         uint256 claimedWinWeight; // winning-side weight that has already claimed
         uint256 distributedLosePool; // losing pool paid out so far
+        // Reputation-weighted stake per side. These decide the outcome; the raw
+        // yesStake/noStake above still decide the payouts.
+        uint256 effectiveYes;
+        uint256 effectiveNo;
     }
 
     struct Review {
@@ -70,8 +75,21 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     IERC20 public immutable collateral;
     Reputation public immutable reputation;
 
-    /// @notice Reps minted per 1e18 of winning stake. Tunable by owner.
-    uint256 public repPerToken = 1;
+    uint256 internal constant BPS = 10_000;
+
+    /// @notice A zero-rep reviewer still counts at face value — diluted, never silenced.
+    uint256 public constant REP_MULT_BASE_BPS = 10_000;
+    /// @notice Slope on sqrt(reps). 600 puts 400 reps at 2.20x and 2,500 at 4.00x.
+    uint256 public constant REP_MULT_K = 600;
+
+    /// @notice Ceiling on the reputation multiplier, in bps. Starts at 1.5x because at
+    ///         genesis nobody has Reps and a wide cap would just amplify early capital.
+    ///         Widened on a published schedule as real reputation accumulates.
+    uint256 public repMultCapBps = 15_000;
+
+    /// @notice Reps minted per sqrt(whole token) of winning stake, before the contest
+    ///         factor. Tunable by owner.
+    uint256 public repRate = 1;
 
     Datanet[] public datanets;
     Artifact[] public artifacts;
@@ -129,8 +147,38 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         emit DatanetCreated(datanetId, name, minSubmitStake, reviewWindow);
     }
 
-    function setRepPerToken(uint256 v) external onlyOwner {
-        repPerToken = v;
+    function setRepRate(uint256 v) external onlyOwner {
+        repRate = v;
+    }
+
+    /// @notice Widen (or narrow) the reputation multiplier ceiling. Must stay >= 1.0x so
+    ///         stake is never discounted below face value.
+    function setRepMultCapBps(uint256 v) external onlyOwner {
+        require(v >= REP_MULT_BASE_BPS, "cap below base");
+        repMultCapBps = v;
+    }
+
+    // --- Weighting ---
+
+    /// @notice How much each token of stake counts, given the staker's reputation.
+    ///         min(cap, 1.00x + 0.06 * sqrt(reps)). Square root so influence keeps
+    ///         growing with a track record but with diminishing returns — no reviewer
+    ///         becomes a dictator.
+    function repMultiplierBps(uint256 reps) public view returns (uint256) {
+        uint256 v = REP_MULT_BASE_BPS + REP_MULT_K * Math.sqrt(reps);
+        uint256 cap = repMultCapBps;
+        return v < cap ? v : cap;
+    }
+
+    /// @notice How genuinely contested an artifact was, 0 … 10_000.
+    ///         2 * min(side) / total: 1.0 when perfectly split, 0 when one side is
+    ///         unopposed. Reps are scaled by this, so being right when nobody disagreed
+    ///         earns nothing — which is what stops reputation being farmed for free.
+    function contestFactorBps(uint256 wYes, uint256 wNo) public pure returns (uint256) {
+        uint256 total = wYes + wNo;
+        if (total == 0) return 0;
+        uint256 lo = wYes < wNo ? wYes : wNo;
+        return (2 * BPS * lo) / total;
     }
 
     // --- Core flow ---
@@ -165,7 +213,9 @@ contract NotchMarket is Ownable, ReentrancyGuard {
                 outcomeYes: false,
                 submitterClaimed: false,
                 claimedWinWeight: 0,
-                distributedLosePool: 0
+                distributedLosePool: 0,
+                effectiveYes: 0,
+                effectiveNo: 0
             })
         );
 
@@ -195,12 +245,18 @@ contract NotchMarket is Ownable, ReentrancyGuard {
             require(reputation.repOf(msg.sender) >= d.minReviewerRep, "insufficient rep");
         }
 
+        // Snapshot reputation now, so Reps earned elsewhere mid-window cannot
+        // retroactively strengthen a position already taken.
+        uint256 weighted = (amount * repMultiplierBps(reputation.repOf(msg.sender))) / BPS;
+
         Review storage r = reviews[artifactId][msg.sender];
         if (support) {
             a.yesStake += amount;
+            a.effectiveYes += weighted;
             r.yesAmount += amount;
         } else {
             a.noStake += amount;
+            a.effectiveNo += weighted;
             r.noAmount += amount;
         }
 
@@ -216,7 +272,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         require(a.status == Status.Reviewing, "already resolved");
         require(block.timestamp >= a.reviewDeadline, "still reviewing");
 
-        a.outcomeYes = a.yesStake >= a.noStake;
+        a.outcomeYes = a.effectiveYes >= a.effectiveNo;
         a.status = Status.Resolved;
         emit Resolved(artifactId, a.outcomeYes, a.yesStake, a.noStake);
     }
@@ -263,7 +319,14 @@ contract NotchMarket is Ownable, ReentrancyGuard {
             }
 
             payout = myWeight + share;
-            reps = (myWeight * repPerToken) / 1 ether;
+
+            // Reps scale with sqrt(stake), not stake, so 100x the capital earns 10x the
+            // reputation rather than 100x. Multiplied by how contested the artifact was,
+            // which is zero when one side went unopposed.
+            uint256 cf = contestFactorBps(a.effectiveYes, a.effectiveNo);
+            if (cf > 0) {
+                reps = (repRate * Math.sqrt(myWeight / 1 ether) * cf) / BPS;
+            }
         }
 
         require(payout > 0 || reps > 0, "nothing to claim");

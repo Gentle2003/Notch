@@ -6,7 +6,12 @@ import {NotchToken} from "../src/NotchToken.sol";
 import {Reputation} from "../src/Reputation.sol";
 import {NotchMarket} from "../src/NotchMarket.sol";
 
-/// @notice Can reputation be farmed without risking anything?
+/// @notice Regression guard for the reputation-farming hole.
+///
+///         Before the earn rule was fixed, an uncontested artifact refunded every
+///         participant in full and still paid Reps proportional to stake — so reputation
+///         cost nothing and converted from capital at a fixed rate. These tests pin the
+///         fix: Reps require genuine opposition, and scale with sqrt(stake).
 contract RepFarmTest is Test {
     bytes32 constant H = keccak256("x");
     NotchToken token;
@@ -15,6 +20,7 @@ contract RepFarmTest is Test {
 
     address attacker = makeAddr("attacker");
     address sock = makeAddr("sock"); // second wallet the attacker controls
+    address honest = makeAddr("honest");
     uint256 dn;
 
     function setUp() public {
@@ -25,7 +31,7 @@ contract RepFarmTest is Test {
         rep.setMarket(address(market), true);
         dn = market.createDatanet("d", "d", 1 ether, 3 days, 0);
 
-        address[2] memory who = [attacker, sock];
+        address[3] memory who = [attacker, sock, honest];
         for (uint256 i; i < who.length; i++) {
             token.transfer(who[i], 100_000 ether);
             vm.prank(who[i]);
@@ -33,59 +39,89 @@ contract RepFarmTest is Test {
         }
     }
 
-    /// An uncontested artifact always resolves YES (0 >= 0), so nobody loses and
-    /// everyone on the winning side is paid Reps proportional to their stake.
-    /// The attacker submits to themselves, stakes big from a second wallet, and
-    /// walks away with the full stake AND the reputation.
-    function test_reputationIsFreeToFarm() public {
+    /// The old farm: submit to yourself, back it from a second wallet, nobody opposes.
+    /// Tokens still come back in full — the contract is not punitive — but the contest
+    /// factor is zero, so the run yields no reputation at all.
+    function test_uncontestedArtifactEarnsNoReps() public {
         uint256 attackerStart = token.balanceOf(attacker);
         uint256 sockStart = token.balanceOf(sock);
 
         vm.prank(attacker);
         uint256 id = market.submitArtifact(dn, "anything", "uri", H, 1 ether);
-
-        // Second wallet backs it. No opposition exists, so none is possible to lose to.
         vm.prank(sock);
         market.review(id, true, 50_000 ether);
 
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
-
         vm.prank(attacker);
         market.claim(id);
         vm.prank(sock);
         market.claim(id);
 
-        emit log_named_uint("attacker reps", rep.repOf(attacker));
-        emit log_named_uint("sock reps", rep.repOf(sock));
-        emit log_named_int(
-            "attacker net tokens", int256(token.balanceOf(attacker)) - int256(attackerStart)
-        );
-        emit log_named_int("sock net tokens", int256(token.balanceOf(sock)) - int256(sockStart));
+        assertEq(token.balanceOf(attacker), attackerStart, "stake is still refunded");
+        assertEq(token.balanceOf(sock), sockStart, "stake is still refunded");
 
-        // Nobody lost a single token.
-        assertEq(token.balanceOf(attacker), attackerStart, "attacker paid nothing");
-        assertEq(token.balanceOf(sock), sockStart, "sock paid nothing");
-
-        // Yet both walked away with reputation, sized by how much capital they moved.
-        assertEq(rep.repOf(sock), 50_000, "reps scale directly with stake");
-        assertGt(rep.repOf(sock), 0);
+        assertEq(rep.repOf(sock), 0, "no opposition, no reputation");
+        assertEq(rep.repOf(attacker), 0, "no opposition, no reputation");
     }
 
-    /// Reps are minted in direct proportion to stake, so capital converts to
-    /// reputation at a fixed rate — reputation is not independent of money.
-    function test_repsAreProportionalToCapital() public {
+    /// A one-sided blowout is nearly as cheap to manufacture, so it must pay nearly
+    /// nothing even though it technically had an opponent.
+    function test_blowoutEarnsAlmostNothing() public {
         vm.prank(attacker);
-        uint256 a = market.submitArtifact(dn, "a", "uri", H, 1 ether);
+        uint256 id = market.submitArtifact(dn, "a", "uri", H, 1 ether);
         vm.prank(sock);
-        market.review(a, true, 1_000 ether);
+        market.review(id, true, 10_000 ether);
+        vm.prank(honest);
+        market.review(id, false, 10 ether); // token opposition
 
         vm.warp(block.timestamp + 3 days);
-        market.resolve(a);
+        market.resolve(id);
         vm.prank(sock);
-        market.claim(a);
+        market.claim(id);
 
-        uint256 repsFor1000 = rep.repOf(sock);
-        assertEq(repsFor1000, 1_000, "10x the stake would earn 10x the reps");
+        // contest factor ~ 2*10/10010 = 0.002, so 100 reps collapses to 0
+        assertEq(rep.repOf(sock), 0, "a token opponent must not unlock full reps");
+    }
+
+    /// Capital no longer converts to reputation at a fixed rate: 100x the stake earns
+    /// 10x the Reps, so buying influence is quadratically more expensive.
+    function test_repsScaleWithSqrtOfStake() public {
+        uint256 big = _contestedRun(10_000 ether, sock);
+        uint256 small = _contestedRun(100 ether, honest);
+
+        emit log_named_uint("reps for 10,000 stake", big);
+        emit log_named_uint("reps for 100 stake", small);
+
+        assertEq(big, 100, "sqrt(10000) * contest 1.0");
+        assertEq(small, 10, "sqrt(100) * contest 1.0");
+        assertEq(big, small * 10, "100x capital -> 10x reps");
+    }
+
+    /// Runs a perfectly contested artifact where `winner` takes the YES side and an equal
+    /// NO stake opposes it, then returns the Reps the winner earned.
+    function _contestedRun(uint256 amount, address winner) internal returns (uint256) {
+        address opponent = makeAddr(string(abi.encodePacked("opp", amount)));
+        token.transfer(opponent, amount);
+        vm.prank(opponent);
+        token.approve(address(market), type(uint256).max);
+
+        vm.prank(attacker);
+        uint256 id = market.submitArtifact(dn, "t", "uri", H, 1 ether);
+
+        vm.prank(winner);
+        market.review(id, true, amount);
+        vm.prank(opponent);
+        market.review(id, false, amount); // dead heat -> ties resolve YES
+
+        // Warp to this artifact's own deadline rather than doing arithmetic on
+        // block.timestamp, so a second run in the same test can't under-warp.
+        vm.warp(market.getArtifact(id).reviewDeadline);
+        market.resolve(id);
+
+        uint256 before = rep.repOf(winner);
+        vm.prank(winner);
+        market.claim(id);
+        return rep.repOf(winner) - before;
     }
 }
