@@ -28,6 +28,7 @@ function SubmitForm() {
     "idle" | "hashing" | "ok" | "unreachable" | "http-error" | "unstable"
   >("idle");
   const [hashDetail, setHashDetail] = useState<string>("");
+  const [showHashHelp, setShowHashHelp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const selected = datanets.find((d) => d.id === datanetId);
@@ -143,28 +144,34 @@ function SubmitForm() {
           )}
           {hashState === "ok" && (
             <p className="text-[11px] text-orange mt-1.5">
-              ✓ Content hashed and stable. Reviewers will be warned if it changes.
+              ✓ Content hashed — reviewers will be warned if it changes
             </p>
           )}
           {hashState === "http-error" && (
             <p className="text-[11px] text-no mt-1.5">
-              The source returned {hashDetail}. Check the link — a 404 usually means the
-              post is deleted, private, or the URL is wrong.
+              Source returned {hashDetail} — check the link is public and correct
             </p>
           )}
-          {hashState === "unreachable" && (
-            <p className="text-[11px] text-muted mt-1.5">
-              Couldn&apos;t reach that URL from the browser. No hash will be committed, so
-              reviewers won&apos;t be able to detect later edits.
+          {(hashState === "unstable" || hashState === "unreachable") && (
+            <p className="text-[11px] text-faint mt-1.5">
+              Not hashable{hashState === "unstable" ? " (source changes every request)" : ""} —
+              submitting without tamper-detection.{" "}
+              <button
+                type="button"
+                onClick={() => setShowHashHelp((v) => !v)}
+                className="underline hover:text-muted"
+              >
+                why?
+              </button>
             </p>
           )}
-          {hashState === "unstable" && (
-            <p className="text-[11px] text-muted mt-1.5">
-              <span className="text-cream">This source can&apos;t be hashed.</span> It returns
-              different bytes on every request — X and most social sites embed per-request
-              tokens — so a hash would report &quot;content changed&quot; forever even if you
-              never touch it. Submitting without one. For tamper-detection, link an archive
-              snapshot or IPFS instead.
+          {showHashHelp && (hashState === "unstable" || hashState === "unreachable") && (
+            <p className="text-[11px] text-muted mt-1.5 leading-relaxed max-w-prose">
+              A hash lets reviewers detect edits made after they staked. It only works on
+              sources that return identical bytes each time. X and most social sites embed
+              per-request tokens, so a hash would report &quot;changed&quot; forever even if
+              you never touched the post. Link an archive snapshot or IPFS if you want the
+              guarantee; otherwise this is fine, it just isn&apos;t verifiable.
             </p>
           )}
         </div>
