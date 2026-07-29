@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseEther } from "viem";
 import { useAccount } from "wagmi";
-import { useDatanets } from "@/lib/reads";
+import { useDatanets, useTargetChain } from "@/lib/reads";
 import { useApproveAndWrite } from "@/lib/useApproveAndWrite";
 import { notchMarketAbi } from "@/lib/abis";
 import { Faucet } from "@/components/Faucet";
@@ -16,6 +16,7 @@ function SubmitForm() {
   const router = useRouter();
   const search = useSearchParams();
   const { datanets } = useDatanets();
+  const { chainId, deployment } = useTargetChain();
   const w = useApproveAndWrite();
 
   const [datanetId, setDatanetId] = useState<number>(Number(search.get("datanet") ?? 0));
@@ -85,6 +86,16 @@ function SubmitForm() {
       </p>
 
       <div className="card p-6 space-y-5">
+        {!deployment && (
+          <div className="rounded-[3px] border border-no/40 bg-no/10 p-3 text-[12px] leading-relaxed">
+            <span className="text-cream">Notch isn&apos;t deployed on this network</span>{" "}
+            <span className="text-muted">
+              (chain {chainId}). Switch your wallet to Robinhood Chain — mainnet (4663) or
+              testnet (46630) — to see datanets.
+            </span>
+          </div>
+        )}
+
         <div>
           <label className="label">Datanet</label>
           <select
@@ -92,6 +103,11 @@ function SubmitForm() {
             value={datanetId}
             onChange={(e) => setDatanetId(Number(e.target.value))}
           >
+            {datanets.length === 0 && (
+              <option value="" disabled>
+                {deployment ? "Loading datanets…" : "Unsupported network"}
+              </option>
+            )}
             {datanets.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name} · min {fmtToken(d.minSubmitStake)} NOTCH
@@ -158,7 +174,7 @@ function SubmitForm() {
         ) : (
           <button
             className="btn-primary w-full"
-            disabled={submitting || w.mining || belowMin || !title}
+            disabled={submitting || w.mining || belowMin || !title || !deployment || datanets.length === 0}
             onClick={submit}
           >
             {submitting || w.mining ? "Submitting…" : "Stake & submit"}

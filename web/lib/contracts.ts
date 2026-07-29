@@ -3,7 +3,7 @@ import type { Address } from "viem";
 /**
  * Deployed contract addresses per chainId.
  *
- * Robinhood Chain testnet (46630) only. A local Anvil entry (31337) used to live
+ * Robinhood Chain mainnet (4663) and testnet (46630). A local Anvil entry (31337) used to live
  * here; it was dropped so the wallet's network list shows real networks only.
  * See git history if you need it back for local development.
  */
@@ -14,6 +14,13 @@ export type Deployment = {
 };
 
 export const deployments: Record<number, Deployment> = {
+  // Robinhood Chain mainnet — deployed 2026-07-28.
+  // Collateral is the live NOTCH token, not one we mint.
+  4663: {
+    NotchToken: "0xFa65fA4BBB3B4806D923be4E210e6860846c8070",
+    Reputation: "0xDc4d866c407521219B511e5d9e1AE583BB396674",
+    NotchMarket: "0x984FBe6f007ea6Fd085E9A244F78cFC6b9705F4E",
+  },
   // Robinhood Chain testnet — v4, deployed 2026-07-28.
   // Adds escalating-bond appeals on top of reputation-weighted outcomes.
   46630: {
