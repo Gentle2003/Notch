@@ -4,7 +4,8 @@ import { ConsensusBar } from "./ConsensusBar";
 import { fmtToken, shortAddr, timeLeft } from "@/lib/format";
 
 export function ArtifactCard({ a, datanetName }: { a: Artifact; datanetName?: string }) {
-  const resolved = a.status === 1;
+  const settled = a.status === 2; // Final
+  const provisional = a.status === 1; // Challengeable
   return (
     <Link
       href={`/artifact/${a.id}`}
@@ -16,7 +17,7 @@ export function ArtifactCard({ a, datanetName }: { a: Artifact; datanetName?: st
         ) : (
           <span />
         )}
-        {resolved ? (
+        {settled ? (
           <span
             className={`pill ${a.outcomeYes ? "bg-orange/15 text-orange" : "bg-no/15 text-no"}`}
           >

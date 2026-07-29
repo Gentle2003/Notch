@@ -1,6 +1,6 @@
 # Resolution v2 — reputation-weighted outcomes
 
-**Status:** proposal, not implemented
+**Status:** implemented and deployed to Robinhood testnet
 **Replaces:** `NotchMarket.resolve()` line 219 and the Rep award in `claim()`
 
 ---

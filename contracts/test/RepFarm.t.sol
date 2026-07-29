@@ -13,6 +13,13 @@ import {NotchMarket} from "../src/NotchMarket.sol";
 ///         cost nothing and converted from capital at a fixed rate. These tests pin the
 ///         fix: Reps require genuine opposition, and scale with sqrt(stake).
 contract RepFarmTest is Test {
+
+    /// Appeals: resolve() only posts a provisional outcome. Claims unlock once the
+    /// challenge window has elapsed and someone finalises it.
+    function _finalizeArtifact(uint256 id) internal {
+        vm.warp(block.timestamp + market.CHALLENGE_WINDOW());
+        market.finalize(id);
+    }
     bytes32 constant H = keccak256("x");
     NotchToken token;
     Reputation rep;
@@ -53,6 +60,7 @@ contract RepFarmTest is Test {
 
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
         vm.prank(attacker);
         market.claim(id);
         vm.prank(sock);
@@ -77,6 +85,7 @@ contract RepFarmTest is Test {
 
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
         vm.prank(sock);
         market.claim(id);
 
@@ -118,6 +127,7 @@ contract RepFarmTest is Test {
         // block.timestamp, so a second run in the same test can't under-warp.
         vm.warp(market.getArtifact(id).reviewDeadline);
         market.resolve(id);
+        _finalizeArtifact(id);
 
         uint256 before = rep.repOf(winner);
         vm.prank(winner);

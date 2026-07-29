@@ -51,7 +51,7 @@ export function describeConsensus(a: ArtifactMeta): string {
   const staked = Number(total + a.submitStake) / 1e18;
   const amount = staked.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
-  if (a.status === 1) {
+  if (a.status === 2) {
     return `${a.outcomeYes ? "Verified as signal" : "Rejected as noise"} · ${amount} NOTCH staked`;
   }
   if (pct === null) return `Open for review · ${amount} NOTCH at stake. Stake your read.`;

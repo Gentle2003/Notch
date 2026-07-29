@@ -7,6 +7,13 @@ import {Reputation} from "../src/Reputation.sol";
 import {NotchMarket} from "../src/NotchMarket.sol";
 
 contract NotchMarketTest is Test {
+
+    /// Appeals: resolve() only posts a provisional outcome. Claims unlock once the
+    /// challenge window has elapsed and someone finalises it.
+    function _finalizeArtifact(uint256 id) internal {
+        vm.warp(block.timestamp + market.CHALLENGE_WINDOW());
+        market.finalize(id);
+    }
     bytes32 constant CONTENT_HASH = keccak256("analysis-v1");
     NotchToken token;
     Reputation rep;
@@ -79,6 +86,7 @@ contract NotchMarketTest is Test {
 
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
 
         NotchMarket.Artifact memory a = market.getArtifact(id);
         assertTrue(a.outcomeYes);
@@ -123,6 +131,7 @@ contract NotchMarketTest is Test {
 
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
         NotchMarket.Artifact memory a = market.getArtifact(id);
         assertFalse(a.outcomeYes);
 
@@ -152,6 +161,7 @@ contract NotchMarketTest is Test {
         uint256 id = _submit(10 ether);
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
         NotchMarket.Artifact memory a = market.getArtifact(id);
         assertTrue(a.outcomeYes); // tie -> YES
 
@@ -182,6 +192,7 @@ contract NotchMarketTest is Test {
         market.review(id, true, 10 ether);
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
         vm.prank(alice);
         market.claim(id);
         vm.prank(alice);

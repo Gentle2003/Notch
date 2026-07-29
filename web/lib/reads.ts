@@ -43,10 +43,18 @@ export type Artifact = {
   noStake: bigint;
   effectiveYes: bigint; // reputation-weighted, decides the outcome
   effectiveNo: bigint;
-  status: number; // 0 Reviewing, 1 Resolved
+  status: number; // see STATUS below
   outcomeYes: boolean;
   submitterClaimed: boolean;
+  challengeDeadline: bigint;
+  round: number;
 };
+
+/**
+ * resolve() posts a provisional outcome; it only becomes payable once the
+ * challenge window elapses and someone finalises it.
+ */
+export const STATUS = { Reviewing: 0, Challengeable: 1, Final: 2 } as const;
 
 export function useDatanetCount() {
   const { market, chainId } = useTargetChain();

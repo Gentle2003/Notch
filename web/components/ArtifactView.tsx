@@ -21,7 +21,8 @@ export function ArtifactView({ id }: { id: number }) {
   }
 
   const datanet = datanets.find((d) => d.id === a.datanetId);
-  const resolved = a.status === 1;
+  const settled = a.status === 2; // Final
+  const provisional = a.status === 1; // Challengeable
 
   return (
     <main className="grid lg:grid-cols-[1fr_360px] gap-6 pt-4">
@@ -37,7 +38,7 @@ export function ArtifactView({ id }: { id: number }) {
                 {datanet.name}
               </Link>
             )}
-            {resolved && (
+            {settled && (
               <span className={`pill ${a.outcomeYes ? "bg-orange/15 text-orange" : "bg-no/15 text-no"}`}>
                 {a.outcomeYes ? "✓ Verified" : "✗ Rejected"}
               </span>
@@ -46,7 +47,7 @@ export function ArtifactView({ id }: { id: number }) {
           <h1 className="text-2xl font-bold leading-tight">{a.title}</h1>
           <div className="text-sm text-muted mt-2">
             Submitted by <span className="text-white">{shortAddr(a.submitter)}</span>
-            {!resolved && <> · {timeLeft(a.reviewDeadline)}</>}
+            {!settled && <> · {timeLeft(a.reviewDeadline)}</>}
           </div>
           <div className="mt-4">
             <ShareThesis id={a.id} title={a.title} />

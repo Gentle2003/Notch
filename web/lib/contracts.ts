@@ -14,12 +14,12 @@ export type Deployment = {
 };
 
 export const deployments: Record<number, Deployment> = {
-  // Robinhood Chain testnet — v3, deployed 2026-07-28.
-  // Reputation-weighted outcomes, contest-scaled Rep earning, decay on inactivity.
+  // Robinhood Chain testnet — v4, deployed 2026-07-28.
+  // Adds escalating-bond appeals on top of reputation-weighted outcomes.
   46630: {
-    NotchToken: "0xc6DB1897F88e5F527507eE4533927fC8e1117F97",
-    Reputation: "0x046d3Fa756aB1263a23a8659B1743066C3E5697D",
-    NotchMarket: "0x151A1179Ce9359b160e516f66Eab2f3c3EA428c7",
+    NotchToken: "0x204d70a11d9315df3F2CbD7FAaA274918514ba61",
+    Reputation: "0x5221B8Dc580321B2408218760f1F81603C798bE0",
+    NotchMarket: "0x52C8a4D65aE2dd8ef2779180a0bbE714FB24b3BA",
   },
 };
 
@@ -33,6 +33,12 @@ export const deployments: Record<number, Deployment> = {
  * Kept for reference; the app does not read from them.
  */
 export const legacyDeployments = [
+  {
+    version: "v3",
+    NotchToken: "0xc6DB1897F88e5F527507eE4533927fC8e1117F97",
+    Reputation: "0x046d3Fa756aB1263a23a8659B1743066C3E5697D",
+    NotchMarket: "0x151A1179Ce9359b160e516f66Eab2f3c3EA428c7",
+  },
   {
     version: "v2",
     NotchToken: "0xa4a1548F907F1d52c2311c3bA152DCC9F141e83C",

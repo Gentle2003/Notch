@@ -6,7 +6,8 @@ import { useAccount } from "wagmi";
 import type { Artifact } from "@/lib/reads";
 import { notchMarketAbi } from "@/lib/abis";
 import { useApproveAndWrite } from "@/lib/useApproveAndWrite";
-import { timeLeft } from "@/lib/format";
+import { fmtToken, timeLeft } from "@/lib/format";
+import { useReadContract } from "wagmi";
 
 export function StakePanel({ a, refetch }: { a: Artifact; refetch: () => void }) {
   const { address } = useAccount();
@@ -16,8 +17,18 @@ export function StakePanel({ a, refetch }: { a: Artifact; refetch: () => void })
 
   const now = Math.floor(Date.now() / 1000);
   const closed = now >= Number(a.reviewDeadline);
-  const resolved = a.status === 1;
+  const settled = a.status === 2; // Final
+  const provisional = a.status === 1; // Challengeable
   const isSubmitter = address?.toLowerCase() === a.submitter.toLowerCase();
+
+  const { data: bond } = useReadContract({
+    address: w.market,
+    abi: notchMarketAbi,
+    functionName: "challengeBond",
+    args: [BigInt(a.id)],
+    chainId: w.chainId,
+    query: { enabled: !!w.market && provisional },
+  });
 
   const stake = async (support: boolean) => {
     if (!w.market) return;
@@ -40,7 +51,7 @@ export function StakePanel({ a, refetch }: { a: Artifact; refetch: () => void })
     }
   };
 
-  const runSimple = async (fn: "resolve" | "claim") => {
+  const runSimple = async (fn: "resolve" | "claim" | "finalize" | "challenge") => {
     if (!w.market) return;
     w.setError(null);
     w.setBusy(true);
@@ -69,8 +80,8 @@ export function StakePanel({ a, refetch }: { a: Artifact; refetch: () => void })
     );
   }
 
-  // Resolved → claim
-  if (resolved) {
+  // Final → claim
+  if (settled) {
     return (
       <div className="card p-5 space-y-4">
         <div
@@ -85,6 +96,62 @@ export function StakePanel({ a, refetch }: { a: Artifact; refetch: () => void })
         <button className="btn-primary w-full" disabled={w.busy || w.mining} onClick={() => runSimple("claim")}>
           {w.busy || w.mining ? "Claiming…" : "Claim winnings"}
         </button>
+        {w.error && <p className="text-xs text-no">{w.error}</p>}
+      </div>
+    );
+  }
+
+  // Provisional outcome: dispute it, or finalise once the window has passed.
+  if (provisional) {
+    const challengeOpen = now < Number(a.challengeDeadline);
+    const needsApprovalForBond = w.needsApproval(bond ? String(Number(bond) / 1e18) : "0");
+    return (
+      <div className="card p-5 space-y-4">
+        <div className={`pill ${a.outcomeYes ? "bg-orange/15 text-orange" : "bg-no/15 text-no"} text-sm`}>
+          Provisional: {a.outcomeYes ? "signal" : "noise"}
+        </div>
+        {challengeOpen ? (
+          <>
+            <p className="text-sm text-muted">
+              Not settled yet. Anyone who disagrees can stake against this and reopen
+              review — the bond doubles each round, so defending a wrong call gets
+              expensive while challenging once does not.
+            </p>
+            <p className="text-[11px] text-muted">
+              Bond to challenge:{" "}
+              <span className="text-cream">{bond ? fmtToken(bond as bigint) : "…"} NOTCH</span>{" "}
+              · round {a.round + 1} of 3 · {timeLeft(a.challengeDeadline)}
+            </p>
+            {needsApprovalForBond ? (
+              <button className="btn-primary w-full" disabled={w.busy || w.mining} onClick={w.approve}>
+                {w.busy || w.mining ? "Approving…" : "Approve NOTCH"}
+              </button>
+            ) : (
+              <button
+                className="btn-no w-full"
+                disabled={w.busy || w.mining || isSubmitter}
+                onClick={() => runSimple("challenge")}
+              >
+                {w.busy || w.mining ? "Challenging…" : "Challenge this outcome"}
+              </button>
+            )}
+            {isSubmitter && (
+              <p className="text-[11px] text-muted">
+                You submitted this, so you can&apos;t challenge it — same rule that stops
+                authors backing their own work.
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted">
+              Challenge window closed. Finalise to unlock claims.
+            </p>
+            <button className="btn-primary w-full" disabled={w.busy || w.mining} onClick={() => runSimple("finalize")}>
+              {w.busy || w.mining ? "Finalising…" : "Finalise outcome"}
+            </button>
+          </>
+        )}
         {w.error && <p className="text-xs text-no">{w.error}</p>}
       </div>
     );

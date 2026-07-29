@@ -23,6 +23,32 @@ export const notchMarketAbi = [
   },
   {
     "type": "function",
+    "name": "CHALLENGE_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_ROUNDS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "REP_MULT_BASE_BPS",
     "inputs": [],
     "outputs": [
@@ -148,6 +174,48 @@ export const notchMarketAbi = [
       },
       {
         "name": "effectiveNo",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "challengeDeadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "round",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "challenge",
+    "inputs": [
+      {
+        "name": "artifactId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "challengeBond",
+    "inputs": [
+      {
+        "name": "artifactId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -321,6 +389,19 @@ export const notchMarketAbi = [
   },
   {
     "type": "function",
+    "name": "finalize",
+    "inputs": [
+      {
+        "name": "artifactId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getArtifact",
     "inputs": [
       {
@@ -414,6 +495,16 @@ export const notchMarketAbi = [
             "name": "effectiveNo",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "challengeDeadline",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "round",
+            "type": "uint8",
+            "internalType": "uint8"
           }
         ]
       }
@@ -457,6 +548,19 @@ export const notchMarketAbi = [
             "internalType": "bool"
           }
         ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "minChallengeBond",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -611,6 +715,19 @@ export const notchMarketAbi = [
   },
   {
     "type": "function",
+    "name": "setMinChallengeBond",
+    "inputs": [
+      {
+        "name": "v",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setRepMultCapBps",
     "inputs": [
       {
@@ -744,6 +861,43 @@ export const notchMarketAbi = [
   },
   {
     "type": "event",
+    "name": "Challenged",
+    "inputs": [
+      {
+        "name": "artifactId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "challenger",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "round",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "bond",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "backsYes",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Claimed",
     "inputs": [
       {
@@ -800,6 +954,25 @@ export const notchMarketAbi = [
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Finalized",
+    "inputs": [
+      {
+        "name": "artifactId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "outcomeYes",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false

@@ -23,9 +23,12 @@ contract NotchMarket is Ownable, ReentrancyGuard {
 
     // --- Types ---
 
+    /// Reviewing -> (deadline) Challengeable -> (window elapses) Final.
+    /// A challenge sends it back to Reviewing for another round.
     enum Status {
         Reviewing,
-        Resolved
+        Challengeable,
+        Final
     }
 
     struct Datanet {
@@ -62,6 +65,8 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         // yesStake/noStake above still decide the payouts.
         uint256 effectiveYes;
         uint256 effectiveNo;
+        uint64 challengeDeadline; // set when a provisional outcome is posted
+        uint8 round; // 0 for the first pass; each challenge increments
     }
 
     struct Review {
@@ -91,6 +96,16 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     ///         factor. Tunable by owner.
     uint256 public repRate = 1;
 
+    /// @notice How long a provisional outcome can be challenged before it finalises.
+    uint64 public constant CHALLENGE_WINDOW = 48 hours;
+
+    /// @notice Rounds of appeal allowed. Each doubles the bond, so holding a false
+    ///         outcome through all of them costs roughly 8x the original margin.
+    uint8 public constant MAX_ROUNDS = 3;
+
+    /// @notice Floor on a challenge bond, so a near-tie cannot be appealed for dust.
+    uint256 public minChallengeBond = 10 ether;
+
     Datanet[] public datanets;
     Artifact[] public artifacts;
 
@@ -117,6 +132,10 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     );
     event Resolved(uint256 indexed artifactId, bool outcomeYes, uint256 yesStake, uint256 noStake);
     event Claimed(uint256 indexed artifactId, address indexed account, uint256 payout, uint256 reps);
+    event Challenged(
+        uint256 indexed artifactId, address indexed challenger, uint8 round, uint256 bond, bool backsYes
+    );
+    event Finalized(uint256 indexed artifactId, bool outcomeYes);
 
     constructor(address collateral_, address reputation_, address owner_) Ownable(owner_) {
         collateral = IERC20(collateral_);
@@ -145,6 +164,10 @@ contract NotchMarket is Ownable, ReentrancyGuard {
             })
         );
         emit DatanetCreated(datanetId, name, minSubmitStake, reviewWindow);
+    }
+
+    function setMinChallengeBond(uint256 v) external onlyOwner {
+        minChallengeBond = v;
     }
 
     function setRepRate(uint256 v) external onlyOwner {
@@ -215,7 +238,9 @@ contract NotchMarket is Ownable, ReentrancyGuard {
                 claimedWinWeight: 0,
                 distributedLosePool: 0,
                 effectiveYes: 0,
-                effectiveNo: 0
+                effectiveNo: 0,
+                challengeDeadline: 0,
+                round: 0
             })
         );
 
@@ -269,12 +294,84 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     ///         resolves YES, so an un-reviewed submission simply returns the submitter's stake.
     function resolve(uint256 artifactId) external {
         Artifact storage a = artifacts[artifactId];
-        require(a.status == Status.Reviewing, "already resolved");
+        require(a.status == Status.Reviewing, "not reviewing");
         require(block.timestamp >= a.reviewDeadline, "still reviewing");
 
         a.outcomeYes = a.effectiveYes >= a.effectiveNo;
-        a.status = Status.Resolved;
+
+        if (a.round >= MAX_ROUNDS) {
+            // Appeals exhausted: this stands.
+            a.status = Status.Final;
+            emit Finalized(artifactId, a.outcomeYes);
+        } else {
+            // Provisional. Claims stay locked until the challenge window elapses.
+            a.status = Status.Challengeable;
+            a.challengeDeadline = uint64(block.timestamp) + CHALLENGE_WINDOW;
+        }
         emit Resolved(artifactId, a.outcomeYes, a.yesStake, a.noStake);
+    }
+
+    /// @notice Bond required to challenge the current provisional outcome: 2x the margin
+    ///         at round 0, then 4x, then 8x.
+    ///
+    ///         It must *exceed* the margin, not merely match it. A bond equal to the
+    ///         margin produces a dead heat, and ties resolve YES — so the challenger
+    ///         would pay in full and leave the disputed outcome standing. Doubling means
+    ///         a challenge actually overturns the provisional result and puts the burden
+    ///         of response back on the other side.
+    function challengeBond(uint256 artifactId) public view returns (uint256) {
+        Artifact storage a = artifacts[artifactId];
+        uint256 margin = a.effectiveYes > a.effectiveNo
+            ? a.effectiveYes - a.effectiveNo
+            : a.effectiveNo - a.effectiveYes;
+        uint256 b = margin << (a.round + 1);
+        return b < minChallengeBond ? minChallengeBond : b;
+    }
+
+    /// @notice Dispute a provisional outcome. The bond is staked against it and review
+    ///         reopens for another round, so a challenge buys scrutiny rather than a
+    ///         reversal — the market still has to agree.
+    function challenge(uint256 artifactId) external nonReentrant {
+        Artifact storage a = artifacts[artifactId];
+        require(a.status == Status.Challengeable, "not challengeable");
+        require(block.timestamp < a.challengeDeadline, "challenge window closed");
+        require(a.round < MAX_ROUNDS, "no rounds left");
+        // Same rule as review(): an author cannot buy validation of their own work,
+        // and their submit stake already sits on the YES side.
+        require(msg.sender != a.submitter, "submitter cannot challenge");
+
+        uint256 bond = challengeBond(artifactId);
+        bool backsYes = !a.outcomeYes; // you only challenge what you disagree with
+
+        uint256 weighted = (bond * repMultiplierBps(reputation.repOf(msg.sender))) / BPS;
+        Review storage r = reviews[artifactId][msg.sender];
+        if (backsYes) {
+            a.yesStake += bond;
+            a.effectiveYes += weighted;
+            r.yesAmount += bond;
+        } else {
+            a.noStake += bond;
+            a.effectiveNo += weighted;
+            r.noAmount += bond;
+        }
+
+        a.round += 1;
+        a.status = Status.Reviewing;
+        a.reviewDeadline = uint64(block.timestamp) + datanets[a.datanetId].reviewWindow;
+        a.challengeDeadline = 0;
+
+        collateral.safeTransferFrom(msg.sender, address(this), bond);
+        emit Challenged(artifactId, msg.sender, a.round, bond, backsYes);
+    }
+
+    /// @notice Lock in a provisional outcome once its challenge window has passed.
+    ///         Permissionless — anyone can pay the gas to unlock claims.
+    function finalize(uint256 artifactId) external {
+        Artifact storage a = artifacts[artifactId];
+        require(a.status == Status.Challengeable, "not challengeable");
+        require(block.timestamp >= a.challengeDeadline, "challenge window open");
+        a.status = Status.Final;
+        emit Finalized(artifactId, a.outcomeYes);
     }
 
     /// @notice Claim winnings and Reps for an artifact. Winners get their stake back plus a
@@ -282,7 +379,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     ///         the same function (their submit stake counts as YES-side weight).
     function claim(uint256 artifactId) external nonReentrant {
         Artifact storage a = artifacts[artifactId];
-        require(a.status == Status.Resolved, "not resolved");
+        require(a.status == Status.Final, "not final");
 
         uint256 payout;
         uint256 reps;

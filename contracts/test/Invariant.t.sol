@@ -84,6 +84,13 @@ contract Handler is Test {
 }
 
 contract InvariantTest is Test {
+
+    /// Appeals: resolve() only posts a provisional outcome. Claims unlock once the
+    /// challenge window has elapsed and someone finalises it.
+    function _finalizeArtifact(uint256 id) internal {
+        vm.warp(block.timestamp + market.CHALLENGE_WINDOW());
+        market.finalize(id);
+    }
     NotchToken token;
     Reputation rep;
     NotchMarket market;
@@ -134,6 +141,13 @@ contract InvariantTest is Test {
 /// @notice Property tests over randomised single-artifact scenarios. These target the dust
 ///         class directly: a fully resolved and fully claimed artifact must leave nothing.
 contract PayoutFuzzTest is Test {
+
+    /// Appeals: resolve() only posts a provisional outcome. Claims unlock once the
+    /// challenge window has elapsed and someone finalises it.
+    function _finalizeArtifact(uint256 id) internal {
+        vm.warp(block.timestamp + market.CHALLENGE_WINDOW());
+        market.finalize(id);
+    }
     NotchToken token;
     Reputation rep;
     NotchMarket market;
@@ -186,6 +200,7 @@ contract PayoutFuzzTest is Test {
 
         vm.warp(market.getArtifact(id).reviewDeadline);
         market.resolve(id);
+        _finalizeArtifact(id);
 
         address[4] memory all = [researcher, yesA, yesB, noA];
         for (uint256 i; i < all.length; i++) {

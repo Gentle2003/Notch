@@ -9,6 +9,13 @@ import {NotchMarket} from "../src/NotchMarket.sol";
 /// @notice Probes whether the pro-rata split leaves unclaimable dust when the
 ///         losing pool does NOT divide evenly across the winning side.
 contract DustTest is Test {
+
+    /// Appeals: resolve() only posts a provisional outcome. Claims unlock once the
+    /// challenge window has elapsed and someone finalises it.
+    function _finalizeArtifact(uint256 id) internal {
+        vm.warp(block.timestamp + market.CHALLENGE_WINDOW());
+        market.finalize(id);
+    }
     bytes32 constant CONTENT_HASH = keccak256("analysis-v1");
     NotchToken token;
     Reputation rep;
@@ -53,6 +60,7 @@ contract DustTest is Test {
 
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
 
         vm.prank(researcher);
         market.claim(id);
@@ -80,6 +88,7 @@ contract DustTest is Test {
 
         vm.warp(block.timestamp + 3 days);
         market.resolve(id);
+        _finalizeArtifact(id);
 
         vm.prank(researcher);
         market.claim(id);
