@@ -35,9 +35,8 @@ export function Footer() {
       </div>
 
       <div className="mt-6 text-[11px] text-faint leading-relaxed max-w-3xl">
-        Testnet only. NOTCH is a valueless test token on Robinhood Chain testnet and nothing
-        here is investment advice. Markets resolve on staked consensus, not on truth — a
-        large enough staker can move any outcome.
+        Markets resolve on staked consensus, not on truth — a
+        large enough staker and a reviewer with enough reputation can move any outcome.
       </div>
     </footer>
   );
