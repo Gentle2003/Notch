@@ -26,3 +26,6 @@ contracts/.env
 # Any *.env file (e.g. contracts/.reviewer.env) — these hold testnet keys.
 # `.env*` only matches names STARTING with .env, so this catch-all is needed.
 *.env
+
+# JetBrains
+.idea/
