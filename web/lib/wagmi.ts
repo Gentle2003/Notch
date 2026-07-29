@@ -7,7 +7,7 @@ import {
   rainbowWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-import { createConfig, http } from "wagmi";
+import { cookieStorage, createConfig, createStorage, http } from "wagmi";
 import { robinhoodTestnet, robinhoodMainnet } from "./chains";
 
 // WalletConnect / Reown project id. This is a PUBLIC identifier — it ships in the
@@ -50,5 +50,10 @@ export const wagmiConfig = createConfig({
     [robinhoodTestnet.id]: http(),
     [robinhoodMainnet.id]: http(),
   },
+  // ssr: true without explicit storage leaves wagmi reconciling server and client
+  // state through the default store, which can strand a half-written connector
+  // record after a disconnect — the next connect then waits on a session that no
+  // longer exists. Naming the storage makes that reconciliation deterministic.
   ssr: true,
+  storage: createStorage({ storage: cookieStorage }),
 });
