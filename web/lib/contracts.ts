@@ -11,15 +11,26 @@ export type Deployment = {
   NotchMarket: Address;
   NotchToken: Address;
   Reputation: Address;
+  /**
+   * True while a deployment is a rehearsal rather than the real launch. The UI
+   * refuses to present the collateral address as a contract address to buy when
+   * this is set — an unlabelled CA is an implicit endorsement, and the current
+   * mainnet collateral is a token whose own name says not to buy it.
+   *
+   * The launch script clears this when it points the app at the real token.
+   */
+  isTest?: boolean;
 };
 
 export const deployments: Record<number, Deployment> = {
-  // Robinhood Chain mainnet — deployed 2026-07-28.
-  // Collateral is the live NOTCH token, not one we mint.
+  // Robinhood Chain mainnet. Collateral is whatever token the launch script
+  // bound the market to — never one we mint. The launch script rewrites the
+  // block below but not this comment, so keep it true of any deployment.
   4663: {
     NotchToken: "0xFa65fA4BBB3B4806D923be4E210e6860846c8070",
     Reputation: "0xDc4d866c407521219B511e5d9e1AE583BB396674",
     NotchMarket: "0x984FBe6f007ea6Fd085E9A244F78cFC6b9705F4E",
+    isTest: true,
   },
   // Robinhood Chain testnet — v4, deployed 2026-07-28.
   // Adds escalating-bond appeals on top of reputation-weighted outcomes.

@@ -30,9 +30,7 @@ export function Footer() {
         </Link>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-border/60">
-        <FooterCA />
-      </div>
+      <FooterCA />
 
       <div className="mt-6 text-[11px] text-faint leading-relaxed max-w-3xl">
         Markets resolve on staked consensus, not on truth — a

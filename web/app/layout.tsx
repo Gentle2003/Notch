@@ -27,6 +27,12 @@ export const metadata: Metadata = {
   description:
     "A research-quality staking market on Robinhood Chain. Researchers stake on their analysis; expert reviewers stake to grade it; the best earn reputation.",
   alternates: { canonical: "/" },
+  // Ownership proof for Virtuals Protocol. `other` renders arbitrary <meta> tags
+  // into <head>; it has to live in the metadata export rather than in JSX, since
+  // Next owns the head element in the App Router.
+  other: {
+    "virtual-protocol-site-verification": "0937a03932299cbb9ea5daa16b141d1e",
+  },
   icons: {
     icon: "/notch-logo-v2.jpg",
     apple: "/notch-logo-v2.jpg",

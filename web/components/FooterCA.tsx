@@ -15,12 +15,21 @@ export function FooterCA() {
   const { deployment, chainId } = useTargetChain();
   if (!deployment) return null;
 
+  // A bare address in a footer reads as "this is the token", so a rehearsal
+  // shows nothing at all rather than an address nobody should be buying.
+  // The launch script drops `isTest` when it writes the real one in.
+  if (deployment.isTest) return null;
+
+  // The divider belongs to the address, not to the footer — otherwise a
+  // rehearsal leaves a rule with nothing beneath it.
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <CopyAddress address={deployment.NotchToken} />
-      <span className="text-[11px] text-faint">
-        {chainId === 4663 ? "Robinhood Chain" : `chain ${chainId}`}
-      </span>
+    <div className="mt-6 pt-6 border-t border-border/60">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <CopyAddress address={deployment.NotchToken} />
+        <span className="text-[11px] text-faint">
+          {chainId === 4663 ? "Robinhood Chain" : `chain ${chainId}`}
+        </span>
+      </div>
     </div>
   );
 }
