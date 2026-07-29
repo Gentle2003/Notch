@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useArtifact, useDatanets } from "@/lib/reads";
 import { ConsensusBar } from "@/components/ConsensusBar";
 import { StakePanel } from "@/components/StakePanel";
-import { Faucet } from "@/components/Faucet";
+import { Balance } from "@/components/Balance";
 import { IntegrityBadge } from "@/components/IntegrityBadge";
 import { ShareThesis } from "@/components/ShareThesis";
 import { fmtToken, shortAddr, timeLeft } from "@/lib/format";
@@ -111,7 +111,7 @@ export function ArtifactView({ id }: { id: number }) {
       {/* Sidebar */}
       <div className="space-y-4">
         <div className="flex justify-end">
-          <Faucet />
+          <Balance />
         </div>
         <StakePanel a={a} refetch={refetch} />
       </div>

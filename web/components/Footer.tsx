@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
-import { CopyAddress } from "./CopyAddress";
-import { getDeployment } from "@/lib/contracts";
+import { FooterCA } from "./FooterCA";
 
 const X_URL = "https://x.com/notchmarket";
 
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN ?? "46630");
-
 export function Footer() {
-  const deployment = getDeployment(CHAIN_ID);
-
   return (
     <footer className="mt-24 border-t border-border pt-8 pb-4">
       <div className="flex flex-col-reverse gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -35,11 +30,9 @@ export function Footer() {
         </Link>
       </div>
 
-      {deployment && (
-        <div className="mt-6 pt-6 border-t border-border/60">
-          <CopyAddress address={deployment.NotchToken} />
-        </div>
-      )}
+      <div className="mt-6 pt-6 border-t border-border/60">
+        <FooterCA />
+      </div>
 
       <div className="mt-6 text-[11px] text-faint leading-relaxed max-w-3xl">
         Testnet only. NOTCH is a valueless test token on Robinhood Chain testnet and nothing

@@ -7,7 +7,7 @@ import { useAccount } from "wagmi";
 import { useDatanets, useTargetChain } from "@/lib/reads";
 import { useApproveAndWrite } from "@/lib/useApproveAndWrite";
 import { notchMarketAbi } from "@/lib/abis";
-import { Faucet } from "@/components/Faucet";
+import { Balance } from "@/components/Balance";
 import { fmtToken } from "@/lib/format";
 import { snapshot as snapshotSource, ZERO_HASH } from "@/lib/verify";
 
@@ -82,7 +82,7 @@ function SubmitForm() {
     <main className="max-w-xl mx-auto pt-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Submit research</h1>
-        <Faucet />
+        <Balance />
       </div>
       <p className="text-muted text-sm -mt-2">
         Post an analysis and stake NOTCH on it being high-signal. Reviewers will grade it —
