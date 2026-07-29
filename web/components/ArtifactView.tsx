@@ -13,11 +13,27 @@ import { fmtToken, shortAddr, timeLeft } from "@/lib/format";
 
 export function ArtifactView({ id }: { id: number }) {
   const artifactId = id;
-  const { artifact: a, refetch } = useArtifact(artifactId);
+  const { artifact: a, refetch, isLoading, notFound } = useArtifact(artifactId);
   const { datanets } = useDatanets();
 
   if (!a) {
-    return <div className="py-16 text-center text-muted">Loading artifact…</div>;
+    if (isLoading) {
+      return <div className="py-16 text-center text-muted">Loading artifact…</div>;
+    }
+    return (
+      <main className="py-20 text-center">
+        <h1 className="display text-3xl mb-3">Thesis #{artifactId} isn&apos;t here</h1>
+        <p className="text-muted text-sm max-w-md mx-auto leading-relaxed">
+          {notFound
+            ? "No artifact with this id exists on the network you're viewing. If someone shared this link, they may have posted it on a different network — connect your wallet and switch to see it."
+            : "Couldn't reach the network to load this thesis. Try again in a moment."}
+        </p>
+        <div className="flex gap-3 justify-center mt-7">
+          <Link href="/" className="btn-primary">Browse datanets</Link>
+          <Link href="/submit" className="btn-outline-orange">Submit research</Link>
+        </div>
+      </main>
+    );
   }
 
   const datanet = datanets.find((d) => d.id === a.datanetId);

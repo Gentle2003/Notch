@@ -1,5 +1,5 @@
 import { createPublicClient, http } from "viem";
-import { robinhoodTestnet } from "./chains";
+import { robinhoodMainnet, robinhoodTestnet } from "./chains";
 import { notchMarketAbi } from "./abis";
 import { getDeployment } from "./contracts";
 
@@ -8,10 +8,10 @@ import { getDeployment } from "./contracts";
  * unfurls with its actual thesis and live consensus. No wallet involved — this
  * runs at request time on the server, before any client JS.
  */
-const CHAIN_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN ?? "46630");
+const CHAIN_ID = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN ?? "4663");
 
 const client = createPublicClient({
-  chain: robinhoodTestnet,
+  chain: CHAIN_ID === robinhoodTestnet.id ? robinhoodTestnet : robinhoodMainnet,
   transport: http(),
 });
 

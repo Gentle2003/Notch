@@ -14,7 +14,10 @@ import { getDeployment } from "./contracts";
 export function useTargetChain() {
   const { chainId: walletChain } = useAccount();
   // Defaults to Robinhood testnet (live network); local dev sets 31337 via .env.local.
-  const fallback = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN ?? "46630");
+  // Mainnet is the default so shared links resolve for visitors who have not
+  // connected a wallet. Testnet has no artifacts, so defaulting there made every
+  // shared link look permanently broken.
+  const fallback = Number(process.env.NEXT_PUBLIC_DEFAULT_CHAIN ?? "4663");
   const chainId = walletChain ?? fallback;
   const deployment = getDeployment(chainId);
   return { chainId, deployment, market: deployment?.NotchMarket as Address | undefined };
@@ -157,7 +160,7 @@ export function useArtifacts() {
 
 export function useArtifact(id: number) {
   const { market, chainId } = useTargetChain();
-  const { data, refetch } = useReadContract({
+  const { data, refetch, isLoading, isError } = useReadContract({
     address: market,
     abi: notchMarketAbi,
     functionName: "getArtifact",
@@ -168,5 +171,7 @@ export function useArtifact(id: number) {
   const artifact = data
     ? ({ ...(data as unknown as Artifact), id, datanetId: Number((data as any).datanetId) } as Artifact)
     : undefined;
-  return { artifact, refetch };
+  // isError covers the out-of-bounds revert you get for an id that doesn't exist on
+  // this chain — which is what a link shared from a different network looks like.
+  return { artifact, refetch, isLoading, notFound: isError && !isLoading };
 }
