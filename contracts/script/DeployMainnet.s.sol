@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Script, console2} from "forge-std/Script.sol";
+import {Script, console2, VmSafe} from "forge-std/Script.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Reputation} from "../src/Reputation.sol";
 import {NotchMarket} from "../src/NotchMarket.sol";
@@ -84,6 +84,14 @@ contract DeployMainnet is Script {
         console2.log("deployer/owner:", deployer);
         console2.log("collateralUnit:", market.collateralUnit());
         console2.log("minChallengeBond:", market.minChallengeBond());
+
+        // forge runs the whole script during a dry run, so an unguarded write here
+        // replaced the real deployment record with simulated addresses that exist
+        // nowhere. Only persist when actually broadcasting.
+        if (!vm.isContext(VmSafe.ForgeContext.ScriptBroadcast)) {
+            console2.log("(simulation - deployment file not written)");
+            return;
+        }
 
         string memory obj = "mainnet";
         vm.serializeAddress(obj, "Reputation", address(rep));
