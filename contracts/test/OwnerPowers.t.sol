@@ -13,9 +13,10 @@ contract RogueMinter {
     function mint(address to, uint256 amount) external { rep.award(to, amount); }
 }
 
-/// @notice What the owner key can still do today, demonstrated rather than asserted.
-///         These are not bugs — they are the powers that need a multisig and a timelock
-///         in front of them before real money is involved.
+/// @notice The owner key here is the deployer — the team, never a researcher or reviewer.
+///         These tests pin what that key can and cannot do now that the dangerous dials
+///         are timelocked: the powers still exist, but they can no longer land silently.
+///         A multisig on top is the remaining piece.
 contract OwnerPowersTest is Test {
     NotchToken token;
     Reputation rep;
@@ -27,7 +28,7 @@ contract OwnerPowersTest is Test {
         token = new NotchToken();
         rep = new Reputation(address(this));
         market = new NotchMarket(address(token), address(rep), address(this));
-        rep.setMarket(address(market), true);
+        rep.initializeMarket(address(market));
     }
 
     /// Step 7: setMarket can authorise ANY contract to mint unlimited Reps. Reputation
@@ -36,34 +37,49 @@ contract OwnerPowersTest is Test {
         assertEq(rep.repOf(attacker), 0);
 
         RogueMinter rogue = new RogueMinter(rep);
-        rep.setMarket(address(rogue), true); // one owner call
+
+        // The one-shot bootstrap is spent, so a new minter can only be queued.
+        rep.proposeMarket(address(rogue), true);
+        vm.expectRevert(bytes("rep: not market"));
         rogue.mint(attacker, 1_000_000);
 
-        assertEq(rep.repOf(attacker), 1_000_000, "reputation minted from nothing");
-        // And it converts straight into vote weight.
-        assertEq(market.repMultiplierBps(rep.repOf(attacker)), market.repMultCapBps());
+        // Executing early is refused.
+        vm.expectRevert(bytes("timelocked"));
+        rep.executeMarketChange();
+
+        // After the delay it lands — the power still exists, it is just no longer silent.
+        vm.warp(block.timestamp + rep.ADMIN_DELAY());
+        rep.executeMarketChange();
+        rogue.mint(attacker, 1_000_000);
+        assertEq(rep.repOf(attacker), 1_000_000, "still possible, but 48h in the open");
     }
 
-    /// Step 6: the multiplier cap is read live, so changing it re-weights every vote in
-    /// every open market instantly — no warning, no delay.
-    function test_ownerCanReweightEveryOpenMarketInstantly() public {
-        RogueMinter rogue = new RogueMinter(rep);
-        rep.setMarket(address(rogue), true);
-        rogue.mint(attacker, 2_500);
-
+    /// The cap is read live on every vote, so widening it re-weights open markets. It
+    /// can still be done — but only after the delay, and visibly.
+    function test_capChangeCannotLandSilently() public {
         assertEq(market.repMultiplierBps(2_500), 15_000, "1.5x under the bootstrap cap");
 
-        market.setRepMultCapBps(40_000); // one owner call
-        assertEq(market.repMultiplierBps(2_500), 40_000, "now 4x, applied retroactively");
+        market.proposeRepMultCapBps(40_000);
+        assertEq(market.repMultiplierBps(2_500), 15_000, "proposing changes nothing yet");
+
+        vm.expectRevert(bytes("timelocked"));
+        market.executeRepMultCapBps();
+
+        vm.warp(block.timestamp + market.ADMIN_DELAY());
+        market.executeRepMultCapBps();
+        assertEq(market.repMultiplierBps(2_500), 40_000, "applies only after the delay");
     }
 
-    /// Reps really are one-shot per artifact — the user's read was right.
-    function test_repRateChangeCannotRewriteAlreadyEarnedReps() public {
+    /// The bootstrap is one-shot: it cannot be reused to slip in a second minter.
+    function test_marketBootstrapCannotBeReused() public {
         RogueMinter rogue = new RogueMinter(rep);
-        rep.setMarket(address(rogue), true);
-        rogue.mint(attacker, 100);
+        vm.expectRevert(bytes("already initialised"));
+        rep.initializeMarket(address(rogue));
+    }
 
+    /// Changing the rate never rewrites reputation already awarded.
+    function test_repRateChangeCannotRewriteHistory() public {
         market.setRepRate(1_000_000);
-        assertEq(rep.repOf(attacker), 100, "already-earned Reps are untouched");
+        assertEq(rep.repOf(attacker), 0, "rate changes are forward-looking only");
     }
 }

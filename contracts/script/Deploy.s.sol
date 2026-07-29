@@ -22,7 +22,7 @@ contract Deploy is Script {
         NotchToken token = new NotchToken();
         Reputation rep = new Reputation(deployer);
         NotchMarket market = new NotchMarket(address(token), address(rep), deployer);
-        rep.setMarket(address(market), true);
+        rep.initializeMarket(address(market));
 
         // Testnet convenience only — the token itself can no longer mint. Do not deploy
         // this to mainnet; the market works fine without it.

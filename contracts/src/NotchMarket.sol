@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Reputation} from "./Reputation.sol";
 
@@ -18,7 +19,7 @@ import {Reputation} from "./Reputation.sol";
 ///         The submitter is treated as a YES-side participant: they win with YES reviewers and
 ///         are slashed with them if NO prevails. Every payout is funded entirely by staked
 ///         collateral — the contract never mints or owes money it does not hold.
-contract NotchMarket is Ownable, ReentrancyGuard {
+contract NotchMarket is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     // --- Types ---
@@ -115,6 +116,17 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     /// @notice Floor on a challenge bond, so a near-tie cannot be appealed for dust.
     uint256 public minChallengeBond = 10 ether;
 
+    /// @notice Delay on parameter changes that affect live markets. pause() is
+    ///         deliberately exempt — an emergency stop that takes two days is not one.
+    uint64 public constant ADMIN_DELAY = 48 hours;
+
+    struct PendingCap {
+        uint256 value;
+        uint64 eta;
+    }
+
+    PendingCap public pendingRepMultCap;
+
     Datanet[] public datanets;
     Artifact[] public artifacts;
 
@@ -145,6 +157,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         uint256 indexed artifactId, address indexed challenger, uint8 round, uint256 bond, bool backsYes
     );
     event Finalized(uint256 indexed artifactId, bool outcomeYes);
+    event RepMultCapProposed(uint256 value, uint64 eta);
 
     constructor(address collateral_, address reputation_, address owner_) Ownable(owner_) {
         collateral = IERC20(collateral_);
@@ -175,6 +188,18 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         emit DatanetCreated(datanetId, name, minSubmitStake, reviewWindow);
     }
 
+    /// @notice Halt new stakes. Deliberately does NOT stop resolve, finalize or claim:
+    ///         pausing the exits would trap everyone's money, which is a worse failure
+    ///         than whatever prompted the pause. If a payout path itself is broken, that
+    ///         needs an upgrade, not a pause.
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
     function setMinChallengeBond(uint256 v) external onlyOwner {
         minChallengeBond = v;
     }
@@ -183,11 +208,26 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         repRate = v;
     }
 
-    /// @notice Widen (or narrow) the reputation multiplier ceiling. Must stay >= 1.0x so
-    ///         stake is never discounted below face value.
-    function setRepMultCapBps(uint256 v) external onlyOwner {
+    /// @notice Queue a change to the multiplier ceiling. Timelocked because the cap is
+    ///         read live on every vote: changing it re-weights every open market
+    ///         instantly, which is not something that should land without warning.
+    ///         Must stay >= 1.0x so stake is never discounted below face value.
+    function proposeRepMultCapBps(uint256 v) external onlyOwner {
         require(v >= REP_MULT_BASE_BPS, "cap below base");
-        repMultCapBps = v;
+        pendingRepMultCap = PendingCap(v, uint64(block.timestamp) + ADMIN_DELAY);
+        emit RepMultCapProposed(v, pendingRepMultCap.eta);
+    }
+
+    function executeRepMultCapBps() external onlyOwner {
+        PendingCap memory p = pendingRepMultCap;
+        require(p.eta != 0, "nothing pending");
+        require(block.timestamp >= p.eta, "timelocked");
+        repMultCapBps = p.value;
+        delete pendingRepMultCap;
+    }
+
+    function cancelRepMultCapChange() external onlyOwner {
+        delete pendingRepMultCap;
     }
 
     // --- Weighting ---
@@ -240,7 +280,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
         string calldata contentURI,
         bytes32 contentHash,
         uint256 stakeAmount
-    ) external nonReentrant returns (uint256 artifactId) {
+    ) external nonReentrant whenNotPaused returns (uint256 artifactId) {
         Datanet storage d = datanets[datanetId];
         require(d.exists, "no datanet");
         require(stakeAmount >= d.minSubmitStake, "stake too low");
@@ -285,7 +325,11 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     }
 
     /// @notice Stake YES (high quality) or NO (low quality) on an artifact.
-    function review(uint256 artifactId, bool support, uint256 amount) external nonReentrant {
+    function review(uint256 artifactId, bool support, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         Artifact storage a = artifacts[artifactId];
         require(a.status == Status.Reviewing, "not reviewing");
         require(block.timestamp < a.reviewDeadline, "review closed");
@@ -362,7 +406,7 @@ contract NotchMarket is Ownable, ReentrancyGuard {
     /// @notice Dispute a provisional outcome. The bond is staked against it and review
     ///         reopens for another round, so a challenge buys scrutiny rather than a
     ///         reversal — the market still has to agree.
-    function challenge(uint256 artifactId) external nonReentrant {
+    function challenge(uint256 artifactId) external nonReentrant whenNotPaused {
         Artifact storage a = artifacts[artifactId];
         require(a.status == Status.Challengeable, "not challengeable");
         require(block.timestamp < a.challengeDeadline, "challenge window closed");

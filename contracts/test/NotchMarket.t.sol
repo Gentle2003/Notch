@@ -32,7 +32,7 @@ contract NotchMarketTest is Test {
         token = new NotchToken();
         rep = new Reputation(owner);
         market = new NotchMarket(address(token), address(rep), owner);
-        rep.setMarket(address(market), true);
+        rep.initializeMarket(address(market));
 
         datanetId = market.createDatanet("RWA Research", "Analyses of tokenized RWAs", 10 ether, 3 days, 0);
 

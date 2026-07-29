@@ -101,9 +101,12 @@ contract InvariantTest is Test {
         token = new NotchToken();
         rep = new Reputation(address(this));
         market = new NotchMarket(address(token), address(rep), address(this));
-        rep.setMarket(address(market), true);
+        rep.initializeMarket(address(market));
         // Widen the multiplier cap so reputation weighting is actually exercised.
-        market.setRepMultCapBps(40_000);
+        // Cap changes are timelocked; fast-forward past the delay to apply it.
+        market.proposeRepMultCapBps(40_000);
+        vm.warp(block.timestamp + market.ADMIN_DELAY());
+        market.executeRepMultCapBps();
         uint256 dn = market.createDatanet("d", "d", 1 ether, 3 days, 0);
 
         address[] memory actors = new address[](4);
@@ -163,8 +166,11 @@ contract PayoutFuzzTest is Test {
         token = new NotchToken();
         rep = new Reputation(address(this));
         market = new NotchMarket(address(token), address(rep), address(this));
-        rep.setMarket(address(market), true);
-        market.setRepMultCapBps(40_000);
+        rep.initializeMarket(address(market));
+        // Cap changes are timelocked; fast-forward past the delay to apply it.
+        market.proposeRepMultCapBps(40_000);
+        vm.warp(block.timestamp + market.ADMIN_DELAY());
+        market.executeRepMultCapBps();
         dn = market.createDatanet("d", "d", 1, 3 days, 0);
 
         address[4] memory who = [researcher, yesA, yesB, noA];

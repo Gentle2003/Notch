@@ -34,17 +34,65 @@ contract Reputation is Ownable {
     event MarketSet(address indexed market, bool allowed);
     event RepAwarded(address indexed account, uint256 amount, uint256 newLifetime);
 
+    /// @notice Delay before a change to minting authority takes effect. Authorising a
+    ///         contract to mint Reps is the most dangerous power here — reputation is
+    ///         meant to be unbuyable, and this is the one call that can issue it by
+    ///         decree. The delay exists so such a change is visible before it lands.
+    uint64 public constant ADMIN_DELAY = 48 hours;
+
+    struct PendingMarket {
+        address market;
+        bool allowed;
+        uint64 eta;
+    }
+
+    PendingMarket public pendingMarket;
+
+    event MarketChangeProposed(address indexed market, bool allowed, uint64 eta);
+
+    /// @notice True once the deploy-time market has been wired in. Guards a one-shot
+    ///         bootstrap: the market cannot be passed to the constructor because it needs
+    ///         this contract's address first.
+    bool public marketInitialized;
+
     constructor(address owner_) Ownable(owner_) {}
+
+    /// @notice Authorise the market deployed alongside this contract. Callable once, at
+    ///         deployment. Every later change to minting authority goes through the
+    ///         timelock, so this cannot be used to quietly add a minter afterwards.
+    function initializeMarket(address market) external onlyOwner {
+        require(!marketInitialized, "already initialised");
+        require(market != address(0), "zero market");
+        marketInitialized = true;
+        isMarket[market] = true;
+        emit MarketSet(market, true);
+    }
 
     modifier onlyMarket() {
         require(isMarket[msg.sender], "rep: not market");
         _;
     }
 
-    /// @notice Authorise (or revoke) a market contract that may award Reps.
-    function setMarket(address market, bool allowed) external onlyOwner {
-        isMarket[market] = allowed;
-        emit MarketSet(market, allowed);
+    /// @notice Queue a change to minting authority. Takes effect after ADMIN_DELAY.
+    function proposeMarket(address market, bool allowed) external onlyOwner {
+        pendingMarket = PendingMarket(market, allowed, uint64(block.timestamp) + ADMIN_DELAY);
+        emit MarketChangeProposed(market, allowed, pendingMarket.eta);
+    }
+
+    /// @notice Apply a queued change once its delay has elapsed.
+    function executeMarketChange() external onlyOwner {
+        PendingMarket memory p = pendingMarket;
+        require(p.eta != 0, "nothing pending");
+        require(block.timestamp >= p.eta, "timelocked");
+        isMarket[p.market] = p.allowed;
+        delete pendingMarket;
+        emit MarketSet(p.market, p.allowed);
+    }
+
+    /// @notice Abandon a queued change. Revoking is always safe to do immediately, so
+    ///         an owner who queued something they regret is not forced to wait it out.
+    function cancelMarketChange() external onlyOwner {
+        delete pendingMarket;
     }
 
     /// @notice Award Reps. Callable only by authorised markets. Resets the decay clock.

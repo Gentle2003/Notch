@@ -25,7 +25,7 @@ contract AppealsTest is Test {
         token = new NotchToken();
         rep = new Reputation(address(this));
         market = new NotchMarket(address(token), address(rep), address(this));
-        rep.setMarket(address(market), true);
+        rep.initializeMarket(address(market));
         dn = market.createDatanet("d", "d", 1 ether, 3 days, 0);
 
         address[4] memory who = [researcher, whale, challenger, bystander];
