@@ -1,61 +1,102 @@
-# Resolution v2 — reputation weighting and appeals
+# Resolution v2 — reputation-weighted outcomes
 
 **Status:** proposal, not implemented
-**Replaces:** `NotchMarket.resolve()` line 219, `a.outcomeYes = a.yesStake >= a.noStake`
+**Replaces:** `NotchMarket.resolve()` line 219 and the Rep award in `claim()`
 
 ---
 
-## 1. The problem
+## 1. Two problems, not one
 
-Today the outcome is decided by raw capital:
+### 1.1 Outcomes are bought with capital
 
 ```solidity
 a.outcomeYes = a.yesStake >= a.noStake;
 ```
 
-A worked attack on the current contract:
+Whoever brings more money is right. On mainnet:
 
 | Step | Actor | Amount |
 | --- | --- | --- |
 | Submit a knowingly false thesis | attacker | 25 |
 | Correctly stake Noise | honest reviewers | 1,000 |
 | Stake Signal | attacker | 1,001 |
-| **Signal wins.** Attacker weight 1,026, losing pool 1,000 | | |
-| Withdraws 2,026 having staked 1,026 | attacker | **+1,000** |
+| Signal wins; attacker withdraws 2,026 having staked 1,026 | | **+1,000** |
 
-The protocol pays the attacker for being wrong, funded by the people who were right. Cost of the attack: gas.
+### 1.2 Reputation is free, and is currently just capital
 
-Worthless testnet tokens are the only thing preventing this today.
+This is the more damaging one, and it invalidates the obvious fix. Two facts, both proven by `test/RepFarm.t.sol`:
+
+**Reps cost nothing to acquire.** An uncontested artifact resolves YES (`0 >= 0`). With no losing side there is no pool to lose, so every participant is refunded in full *and* paid Reps. Submit to yourself, back it from a second wallet, claim both sides:
+
+```
+attacker net tokens: 0
+sock net tokens:     0
+sock reps:           50,000
+```
+
+**Reps are minted in direct proportion to stake:**
+
+```solidity
+reps = (myWeight * repPerToken) / 1 ether;   // reps == stake
+```
+
+Ten times the capital earns exactly ten times the reputation, at a fixed exchange rate.
+
+Together these mean reputation is **not** independent of money — it is money with a delay. Weighting votes by Reps without fixing this would *amplify* §1.1: farm Reps for free, then apply a 4× multiplier on top of your capital.
+
+**The earn rule must be fixed first. Everything else depends on it.**
 
 ---
 
 ## 2. Design principles
 
-1. **Influence must be expensive to acquire and cheap to lose.** Capital is neither.
-2. **Reputation is the one thing on this network that cannot be bought** — `Reputation` has no transfer function, by design.
-3. **Solvency is non-negotiable.** Whatever changes, the escrow must still pay out exactly what it took in. The dust-sweep proof must survive.
+1. **Influence must be earned by being right when it was hard.** Being right when it was obvious and uncontested says nothing about judgment.
+2. **Capital must not convert linearly into reputation**, or reputation is a rebranding of capital.
+3. **Solvency is non-negotiable.** Payouts must still sum to the pool; the dust-sweep proof must survive.
 4. **Newcomers must be able to participate**, or the network never bootstraps.
+5. **Reps are never confiscated.** A track record is a record. Being wrong costs capital, not history.
 
 ---
 
-## 3. Reputation-weighted outcomes
+## 3. The vote
 
-### 3.1 The split that makes this safe
+### 3.1 The split that keeps this safe
 
 **Reputation weights the vote. Capital determines the payout.**
 
-- `effectiveWeight` — used *only* to decide `outcomeYes`
-- `payout` — computed from raw stake, exactly as today
+- `effectiveWeight` decides `outcomeYes` only
+- `payout` is computed from raw stake, exactly as today
 
-This matters for two reasons. It keeps the solvency math untouched (payouts still sum to the pool, so `test_noDustOnUnevenSplit` still holds). And it means reputation buys **influence, not yield** — a high-rep reviewer decides more, but does not extract more per token. Without that split, reputation becomes a rent-seeking position and the incentive to farm it detaches from being correct.
+The escrow math is untouched, so `test_noDustOnUnevenSplit` still holds. And reputation buys **influence, not yield** — a high-rep reviewer decides more but extracts no more per token. Without that split, reputation becomes a rent-seeking position and farming it detaches from being correct.
 
-### 3.2 The multiplier
+### 3.2 The expressions
+
+For reviewer *i* with stake *sᵢ* (whole tokens) and effective reputation *rᵢ*:
+
+**Vote multiplier** — how much each token of stake counts:
+
+$$M(r) = \min\left(M_{max},\; 1 + k\sqrt{r}\right)$$
+
+with $M_{max} = 4.0$, $k = 0.06$.
+
+**Effective weight** of one reviewer:
+
+$$w_i = s_i \cdot M(r_i)$$
+
+**Side totals** (the submitter is excluded from both — no weighted vote on your own work):
+
+$$W_{yes} = \sum_{i \in YES} s_i \cdot M(r_i) \qquad W_{no} = \sum_{i \in NO} s_i \cdot M(r_i)$$
+
+**Outcome:**
+
+$$\text{outcomeYes} = W_{yes} \geq W_{no}$$
+
+In integer form, everything in basis points:
 
 ```
-repMultiplierBps(reps) = min(MAX_BPS, BASE_BPS + K * sqrt(reps))
+M_bps(r) = min(40_000, 10_000 + 600 * isqrt(r))
+w_i      = stake_i * M_bps(reps_i) / 10_000
 ```
-
-With `BASE_BPS = 10_000` (1.00×), `K = 600`, `MAX_BPS = 40_000` (4.00×):
 
 | Reps | Multiplier |
 | --- | --- |
@@ -66,131 +107,107 @@ With `BASE_BPS = 10_000` (1.00×), `K = 600`, `MAX_BPS = 40_000` (4.00×):
 | 1,600 | 3.40× |
 | 2,500+ | 4.00× (capped) |
 
-Square root, not linear: influence keeps growing with a track record but with diminishing returns, so no single reviewer becomes a dictator. `BASE_BPS = 10_000` means a zero-rep reviewer still counts at face value — they are diluted, never silenced. The cap bounds worst-case concentration to a number you can state publicly.
+Square root, so influence keeps growing with a track record but with diminishing returns — no reviewer becomes a dictator. `BASE = 1.00×` means a zero-rep reviewer still counts at face value: diluted, never silenced. The cap bounds worst-case concentration to a number you can state publicly.
 
-`sqrt` via OpenZeppelin `Math.sqrt`. All integer math, no floats.
+**Implementation note.** These sums cannot be computed by looping reviewers in `resolve()` — unbounded loop, guaranteed gas DoS. They accumulate in `review()`, reading the reviewer's reps once at stake time. That also closes a timing hole: **reputation is snapshotted when you stake**, so you cannot earn Reps elsewhere mid-window to retroactively strengthen a position.
 
-### 3.3 Effective weight
+---
+
+## 4. The earn rule
+
+### 4.1 The expression
+
+Reps are awarded at claim time to the winning side only:
+
+$$\Delta r_i = R \cdot \sqrt{s_i} \cdot C$$
+
+where **C is the contest factor**:
+
+$$C = \frac{2 \cdot \min(W_{yes}, W_{no})}{W_{yes} + W_{no}}$$
+
+and $\Delta r_i = 0$ whenever $\min(W_{yes}, W_{no}) = 0$.
+
+In integer form:
 
 ```
-effectiveYes = Σ over YES reviewers of  stake_i * repMultiplierBps(reps_i) / 10_000
-effectiveNo  = Σ over NO  reviewers of  stake_i * repMultiplierBps(reps_i) / 10_000
-
-outcomeYes = effectiveYes >= effectiveNo
+C_bps  = 20_000 * min(W_yes, W_no) / (W_yes + W_no)     // 0 … 10_000
+Δreps  = R * isqrt(stake_i / 1e18) * C_bps / 10_000
 ```
 
-The submitter's stake is **excluded** from both, exactly as `consensusBps` already excludes it today. An author does not get a weighted vote on their own work.
+### 4.2 What each term does
 
-**Implementation note.** These sums cannot be computed in `resolve()` by iterating reviewers — unbounded loop, guaranteed gas DoS. They must be accumulated incrementally in `review()`, where the reviewer's reps are read once at stake time. This also fixes the timing question: **reputation is snapshotted when you stake**, so you cannot earn Reps elsewhere mid-window to retroactively strengthen a position.
+**√sᵢ breaks the exchange rate.** 100× the capital earns 10× the reputation, not 100×. Buying influence gets quadratically more expensive.
 
-### 3.4 What this changes for the attacker
+**C prices difficulty.** It is 1.0 when the market was perfectly split, and falls toward 0 as one side dominates:
 
-Same attack, against a reviewer pool averaging 400 reps (2.20×):
-
-| Side | Raw stake | Multiplier | Effective |
+| Situation | W_yes : W_no | C | Reps |
 | --- | --- | --- | --- |
-| Honest (Noise) | 1,000 | 2.20× | **2,200** |
-| Attacker (Signal), 0 reps | 1,001 | 1.00× | 1,001 |
+| Uncontested | 1000 : 0 | **0.00** | **none** |
+| Blowout | 1000 : 10 | 0.02 | negligible |
+| Contested | 700 : 300 | 0.60 | most |
+| Knife-edge | 510 : 490 | 0.98 | full |
 
-The attack fails. To win, the attacker must stake **>2,200** to capture a 1,000 pool.
+**C = 0 when uncontested kills the farm outright.** With no opposition there is no reputation, so the exploit in §1.2 pays nothing. It also stops the subtler version: staking huge amounts on obviously-correct artifacts to grind Reps cheaply. Being right when nobody disagreed is not evidence of judgment, and is no longer paid as if it were.
 
-**Be precise about what that does and does not achieve.** The attacker's *profit* if they win is still the losing pool — their own stake comes back. What changes is capital efficiency: they must commit 2.2× (rising to 4× at cap) the capital they are trying to steal, and they lose all of it if they are outvoted. It raises the bar and makes the attack capital-hungry. **It does not make it impossible.** Section 5 is what makes it expensive to sustain.
+### 4.3 Calibration
 
----
-
-## 4. Reputation slashing
-
-Reps are currently **award-only** — `Reputation.award()` exists, nothing removes them. That is a hole: an attacker who builds a track record can spend it once with no consequence.
-
-Add:
-
-```solidity
-function slash(address account, uint256 amount) external onlyMarket;
-```
-
-Applied on the losing side at claim time, proportional to stake:
-
-```
-repSlashed = repOf(loser) * min(BPS_MAX, loserStake * SLASH_RATE / totalLosingStake) / BPS_MAX
-```
-
-The effect: a reviewer who spends a large reputation backing a wrong outcome loses a chunk of what took months to earn. Reputation attacks become **single-use**, and the cost is the entire future value of the position.
-
-Keep `SLASH_RATE` well below 100%. Honest reviewers are wrong sometimes; the goal is to make being wrong *sting*, not to wipe out anyone who takes one bad position. Start around 20–30% and tune with real data.
+At $R = 1$, staking 10,000 tokens on a perfectly contested market earns 100 reps. Reaching the 4× cap needs ~2,500 reps — on the order of 25 large, genuinely contested, correct calls. Reaching maximum influence should be hard and slow. Tune $R$ once real distributions are observable.
 
 ---
 
-## 5. Appeals
+## 5. Decay, not slashing
 
-Reputation weighting alone still loses to enough capital in a single shot. Appeals remove the single shot.
+An earlier draft proposed slashing Reps from the losing side. **Dropped.** It punishes honest reviewers for being occasionally wrong, which is the normal condition of anyone doing real analysis, and it makes participating in close calls — exactly the calls the network needs — the most dangerous thing you can do.
 
-### 5.1 Mechanics
+But the concern behind it is real: **if Reps only ever grow, leverage is permanent and reusable.** Farm once, hold 4× forever, attack repeatedly at no lasting cost.
 
-1. `resolve()` computes a provisional outcome and opens a **challenge window** (48h). No claims yet.
-2. Anyone may challenge by posting a bond:
+Decay solves that without confiscation:
 
-   ```
-   bond_n = max(MIN_BOND, 2^n * margin)     where margin = |effectiveYes - effectiveNo|
-   ```
+$$r_{\text{effective}} = r \cdot 2^{-\lfloor \Delta t / T_{1/2} \rfloor}$$
 
-3. A challenge reopens review for another round. The bond joins the side the challenger backs.
-4. Each further challenge doubles: `2× margin`, then `4×`, then `8×`.
-5. After `MAX_ROUNDS` (3), the outcome is final.
-6. A successful challenger recovers their bond and shares the newly-losing pool. A failed challenger forfeits the bond to the winners.
+with $T_{1/2} = 180$ days since the account's last correct resolution. As a bit shift:
 
-### 5.2 Why this bites
+```
+effectiveReps = reps >> (elapsed / HALF_LIFE)
+```
 
-Holding a wrong outcome means winning **every** round. Costs compound:
+Reputation reflects **recent** judgment. Nobody is punished for a bad call; influence simply has to be maintained. Someone who earned 4× two years ago and vanished should not still outvote active reviewers.
 
-| Round | Attacker must post | Cumulative |
-| --- | --- | --- |
-| 0 | 4× honest capital (rep-weighted) | 4× |
-| 1 | 2× margin | ~6× |
-| 2 | 4× margin | ~10× |
-| 3 | 8× margin | ~18× |
-
-Honest challengers pay once. The attacker pays every time, with capital locked for days.
-
-### 5.3 Honest limitation
-
-**A rich enough attacker still wins the final round.** Every finite-round appeal system has this property, Kleros and Augur included — they escalate to token forking, which is a far larger build.
-
-The practical mitigation is to keep the prize below the cost: cap per-artifact stake, or scale the cap with the reviewer pool's total reputation, so extractable value can never grow large enough to justify ~18× capital lockup. **This should be stated in the docs rather than glossed** — a protocol claiming attack-proof resolution that isn't invites exactly the person who checks.
+Store the raw total as an immutable record — history is preserved, only the weighting decays.
 
 ---
 
 ## 6. Bootstrap
 
-At genesis every reviewer has 0 reps, every multiplier is 1.00×, and resolution degenerates to pure capital — the current design. Reputation weighting only defends a network that already has reputation.
+At genesis everyone has 0 reps, every multiplier is 1.00×, and resolution degenerates to pure capital. Reputation weighting only defends a network that already has reputation.
 
-Two options.
+**Phased cap.** `MAX_BPS` starts at 15,000 (1.5×) and widens on a published schedule as reputation accumulates. Predictable and auditable; put it behind the same timelock as other admin powers.
 
-**A. Phased cap (recommended).** `MAX_BPS` starts at 15,000 (1.5×) and widens on a published schedule as real reputation accumulates. Predictable, auditable, no cleverness. Requires governance action, so put it behind the same timelock as other admin powers.
+A self-scaling cap tied to `totalRep` is more elegant but gameable until the earn rate has been observed under real conditions. Not yet.
 
-**B. Self-scaling cap.** `MAX_BPS = 10_000 + min(30_000, totalRep / N)` — widens automatically as the network matures. Elegant, no discretion, but gameable if Reps turn out to be cheap to farm. Not recommended until the earn rate has been observed under real conditions.
-
-Either way, be explicit publicly: **early markets are capital-weighted and should carry small stakes.** Seeding a founding reviewer set with initial Reps is defensible if disclosed, and corrosive if discovered later.
+Say plainly in public that **early markets are capital-weighted and should carry small stakes.** Seeding a founding reviewer set is defensible if disclosed, and corrosive if discovered later.
 
 ---
 
 ## 7. What this does not fix
 
-- A determined whale can still win the final appeal round (§5.3).
-- Reputation earned in one datanet counts everywhere. A top RWA analyst carries full weight into medical theses. Per-datanet reputation is the correct answer and a larger change.
-- Nothing here makes the *content* verifiable. `contentHash` detects edits; it does not establish that a claim is true.
-- Collusion between high-rep reviewers is unaddressed. Commit-reveal voting would help and is orthogonal.
+- **Enough capital still wins a single round.** Weighting raises the required multiple to 2–4×; it is not a wall. Escalating-bond appeals are the answer and are deferred to a later spec.
+- **Reputation is global.** A top RWA analyst carries full weight into medical theses. Per-datanet reputation is correct and is a larger change.
+- **Sock-puppet contests.** An attacker can manufacture a contest by funding both sides to raise C. It now costs them real money — the losing wallet is genuinely slashed — but it is not free. Worth modelling before mainnet.
+- **Nothing here makes claims verifiable.** `contentHash` detects edits; it does not establish truth.
+- **Collusion between high-rep reviewers** is unaddressed. Commit-reveal voting would help and is orthogonal.
 
 ---
 
 ## 8. Implementation order
 
-1. `Reputation.slash()` + tests — no behaviour change, purely additive
-2. `repMultiplierBps` as a pure function + fuzz the curve for overflow and monotonicity
-3. Accumulate `effectiveYes` / `effectiveNo` in `review()`, snapshotting reps at stake time
-4. Switch `resolve()` to effective weights; **payout math untouched**
-5. Invariant test: escrow still drains to zero across randomised rep distributions
-6. Challenge window + bond escalation
-7. Wire reputation slashing into `claim()` on the losing side
-8. Frontend: show effective vs raw weight, so people can see *why* a side is winning
+1. Keep `test/RepFarm.t.sol` as a standing regression guard — it must go from passing to reverting
+2. `repMultiplierBps` and the contest factor as pure functions; fuzz for overflow and monotonicity
+3. Replace the earn rule in `claim()` — **this alone closes the live exploit**
+4. Accumulate `W_yes` / `W_no` in `review()`, snapshotting reps at stake time
+5. Switch `resolve()` to effective weights; **payout math untouched**
+6. Invariant test: escrow still drains to zero across randomised rep distributions
+7. Decay on read
+8. Frontend: show effective vs raw weight so people can see *why* a side is winning
 
-Steps 1–5 are the substance and are independently shippable. Steps 6–7 can follow.
+Step 3 is the urgent one and ships independently of everything else.
