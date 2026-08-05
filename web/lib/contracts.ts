@@ -27,9 +27,9 @@ export const deployments: Record<number, Deployment> = {
   // bound the market to — never one we mint. The launch script rewrites the
   // block below but not this comment, so keep it true of any deployment.
   4663: {
-    NotchToken: "0x9Eb9b2986111aE9f60b36F6d26Bdd02D19372F9D",
-    Reputation: "0x1F56ba0baFcf48427c1a563Fa152ec083F0A51DF",
-    NotchMarket: "0xAe6cb4f6e01d851164bBDf360b78dccE618ec4A7",
+    NotchToken: "0xf840f342f11ef30fe3d018b76bbe77c164dab52b",
+    Reputation: "0xc544114f4ecc4B7331D008b20550fF593C0835A0",
+    NotchMarket: "0x468a2b93772D57cBB8D0ea7224eC2f274DfFdb36",
   },
   // Robinhood Chain testnet — v4, deployed 2026-07-28.
   // Adds escalating-bond appeals on top of reputation-weighted outcomes.
